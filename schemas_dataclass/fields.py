@@ -2,6 +2,7 @@
 import abc
 import re
 import sys
+from .exceptions import ValidationError
 
 # Python 2/3 兼容性
 if sys.version_info[0] >= 3:
@@ -9,15 +10,6 @@ if sys.version_info[0] >= 3:
     string_types = (str,)
 else:
     string_types = (str, unicode)
-
-class ValidationError(Exception):
-    """Validation error exception"""
-    def __init__(self, message, field_name=None, path=None):
-        self.message = message
-        self.field_name = field_name
-        self.path = path or []
-        super(ValidationError, self).__init__(': '.join(self.path + [message]) if self.path else message)
-
 
 class Field(object):
     __metaclass__ = abc.ABCMeta

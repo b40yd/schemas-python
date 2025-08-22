@@ -182,7 +182,7 @@ def example_nested_dataclass():
         street = StringField(min_length=1, max_length=100)
         city = StringField(min_length=1, max_length=50)
         state = StringField(min_length=2, max_length=50)
-        zipcode = StringField(regex=r'^\d{5}(-\d{4})?$')
+        zipcode = StringField(regex=r'^\d{6}?$')
         
         def get_full_address(self):
             """获取完整地址"""
