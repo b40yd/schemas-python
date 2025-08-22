@@ -1,0 +1,33 @@
+# 包含额外文件到分发包中
+
+# 文档文件
+include README.md
+include CHANGELOG.md
+include LICENSE
+
+# 配置文件
+include requirements.txt
+include requirements-dev.txt
+include pytest.ini
+include tox.ini
+include setup.py
+
+# 文档目录
+recursive-include docs *.md
+
+# 示例目录
+recursive-include examples *.py
+
+# 测试目录（可选，通常不包含在分发包中）
+# recursive-include tests *.py
+
+# 排除不需要的文件
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *~
+global-exclude .DS_Store
+global-exclude __pycache__
+prune .git
+prune .tox
+prune htmlcov
+prune .pytest_cache
