@@ -63,12 +63,15 @@ def sample_dataclass():
     """创建一个示例 dataclass"""
     @dataclass
     class User(object):
-        name = StringField(min_length=2, max_length=50)
-        age = NumberField(minvalue=0, maxvalue=120)
+        # 必填字段
+        name = StringField(min_length=2, max_length=50, required=True)
         email = StringField(
-            regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+            required=True
         )
-        tags = ListField(item_type=str, required=False)
+        # 可选字段 (默认 required=False)
+        age = NumberField(minvalue=0, maxvalue=120)
+        tags = ListField(item_type=str)
     
     return User
 

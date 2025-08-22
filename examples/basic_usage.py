@@ -22,50 +22,77 @@ def example_basic_fields():
     """基础字段使用示例"""
     print("=== 基础字段使用示例 ===\n")
     
-    # 1. StringField 示例
-    print("1. StringField 示例:")
+    # 1. StringField 示例 (默认 required=False)
+    print("1. StringField 示例 (可选字段):")
     name_field = StringField(min_length=2, max_length=50)
-    
+
     try:
         result = name_field.validate("Alice")
-        print(f"  ✓ 有效姓名: {result}")
+        print("  ✓ 有效姓名: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
-    
+        print("  ✗ 验证失败: {}".format(e.message))
+
+    try:
+        result = name_field.validate(None)  # 可选字段，None 是有效的
+        print("  ✓ 可选字段为空: {}".format(result))
+    except ValidationError as e:
+        print("  ✗ 验证失败: {}".format(e.message))
+
     try:
         name_field.validate("A")  # 太短
     except ValidationError as e:
-        print(f"  ✗ 姓名太短: {e.message}")
+        print("  ✗ 姓名太短: {}".format(e.message))
+
+    # 1.1 必填字段示例
+    print("\n1.1 StringField 示例 (必填字段):")
+    required_name_field = StringField(min_length=2, max_length=50, required=True)
+
+    try:
+        result = required_name_field.validate("Bob")
+        print("  ✓ 有效姓名: {}".format(result))
+    except ValidationError as e:
+        print("  ✗ 验证失败: {}".format(e.message))
+
+    try:
+        required_name_field.validate(None)  # 必填字段，None 无效
+    except ValidationError as e:
+        print("  ✗ 必填字段为空: {}".format(e.message))
     
-    # 2. NumberField 示例
-    print("\n2. NumberField 示例:")
+    # 2. NumberField 示例 (默认 required=False)
+    print("\n2. NumberField 示例 (可选字段):")
     age_field = NumberField(minvalue=0, maxvalue=120)
-    
+
     try:
         result = age_field.validate(25)
-        print(f"  ✓ 有效年龄: {result}")
+        print("  ✓ 有效年龄: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
+        print("  ✗ 验证失败: {}".format(e.message))
+
+    try:
+        result = age_field.validate(None)  # 可选字段，None 是有效的
+        print("  ✓ 可选年龄字段为空: {}".format(result))
+    except ValidationError as e:
+        print("  ✗ 验证失败: {}".format(e.message))
     
     try:
         age_field.validate(150)  # 太大
     except ValidationError as e:
-        print(f"  ✗ 年龄超出范围: {e.message}")
-    
+        print("  ✗ 年龄超出范围: {}".format(e.message))
+
     # 3. ListField 示例
     print("\n3. ListField 示例:")
     tags_field = ListField(item_type=str, min_length=1, max_length=5)
-    
+
     try:
         result = tags_field.validate(["python", "programming"])
-        print(f"  ✓ 有效标签: {result}")
+        print("  ✓ 有效标签: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
-    
+        print("  ✗ 验证失败: {}".format(e.message))
+
     try:
         tags_field.validate([])  # 太短
     except ValidationError as e:
-        print(f"  ✗ 标签列表为空: {e.message}")
+        print("  ✗ 标签列表为空: {}".format(e.message))
 
 
 def example_dataclass_basic():
@@ -74,14 +101,17 @@ def example_dataclass_basic():
     
     @dataclass
     class User(object):
-        name = StringField(min_length=2, max_length=50)
-        age = NumberField(minvalue=0, maxvalue=120)
+        # 必填字段
+        name = StringField(min_length=2, max_length=50, required=True)
         email = StringField(
-            regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+            required=True
         )
-        tags = ListField(item_type=str, required=False)
+        # 可选字段 (默认 required=False)
+        age = NumberField(minvalue=0, maxvalue=120)
+        tags = ListField(item_type=str)
     
-    print("1. 创建有效用户:")
+    print("1. 创建有效用户 (包含所有字段):")
     try:
         user = User(
             name="Alice Smith",
@@ -89,41 +119,61 @@ def example_dataclass_basic():
             email="alice@example.com",
             tags=["developer", "python"]
         )
-        print(f"  ✓ 用户创建成功!")
-        print(f"    姓名: {user.name}")
-        print(f"    年龄: {user.age}")
-        print(f"    邮箱: {user.email}")
-        print(f"    标签: {user.tags}")
+        print("  ✓ 用户创建成功!")
+        print("    姓名: {}".format(user.name))
+        print("    年龄: {}".format(user.age))
+        print("    邮箱: {}".format(user.email))
+        print("    标签: {}".format(user.tags))
     except ValidationError as e:
-        print(f"  ✗ 用户创建失败: {e.message}")
+        print("  ✗ 用户创建失败: {}".format(e.message))
+
+    print("\n1.1 创建用户 (仅必填字段):")
+    try:
+        user = User(
+            name="Bob Johnson",
+            email="bob@example.com"
+            # age 和 tags 是可选的，可以不提供
+        )
+        print("  ✓ 用户创建成功!")
+        print("    姓名: {}".format(user.name))
+        print("    年龄: {}".format(user.age))  # 应该是 None
+        print("    邮箱: {}".format(user.email))
+        print("    标签: {}".format(user.tags))  # 应该是 None
+    except ValidationError as e:
+        print("  ✗ 用户创建失败: {}".format(e.message))
     
     print("\n2. 测试验证错误:")
     try:
-        User(name="A", age=28, email="alice@example.com")  # 姓名太短
+        User(name="A", email="alice@example.com")  # 姓名太短
     except ValidationError as e:
-        print(f"  ✗ 姓名验证失败: {e.message}")
-    
+        print("  ✗ 姓名验证失败: {}".format(e.message))
+
     try:
         User(name="Bob", age=150, email="bob@example.com")  # 年龄超出范围
     except ValidationError as e:
-        print(f"  ✗ 年龄验证失败: {e.message}")
-    
+        print("  ✗ 年龄验证失败: {}".format(e.message))
+
     try:
-        User(name="Charlie", age=30, email="invalid-email")  # 邮箱格式错误
+        User(name="Charlie", email="invalid-email")  # 邮箱格式错误
     except ValidationError as e:
-        print(f"  ✗ 邮箱验证失败: {e.message}")
+        print("  ✗ 邮箱验证失败: {}".format(e.message))
+
+    try:
+        User(name="David")  # 缺少必填的邮箱字段
+    except ValidationError as e:
+        print("  ✗ 缺少必填字段: {}".format(e.message))
     
     print("\n3. 字段访问方式:")
     user = User(name="David", age=35, email="david@example.com")
     
-    print(f"  属性访问: user.name = {user.name}")
-    print(f"  索引访问: user['name'] = {user['name']}")
-    print(f"  get方法访问: user.get('name') = {user.get('name')}")
-    print(f"  get方法默认值: user.get('nonexistent', 'default') = {user.get('nonexistent', 'default')}")
-    
+    print("  属性访问: user.name = {}".format(user.name))
+    print("  索引访问: user['name'] = {}".format(user['name']))
+    print("  get方法访问: user.get('name') = {}".format(user.get('name')))
+    print("  get方法默认值: user.get('nonexistent', 'default') = {}".format(user.get('nonexistent', 'default')))
+
     print("\n4. to_dict() 方法:")
     user_dict = user.to_dict()
-    print(f"  用户字典: {user_dict}")
+    print("  用户字典: {}".format(user_dict))
 
 
 def example_advanced_validation():
@@ -139,32 +189,32 @@ def example_advanced_validation():
     
     try:
         result = phone_field.validate("123-456-7890")
-        print(f"  ✓ 有效电话: {result}")
+        print("  ✓ 有效电话: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
-    
+        print("  ✗ 验证失败: {}".format(e.message))
+
     try:
         phone_field.validate("1234567890")  # 格式错误
     except ValidationError as e:
-        print(f"  ✗ 格式错误: {e.message}")
-    
+        print("  ✗ 格式错误: {}".format(e.message))
+
     # 2. 选择项验证
     print("\n2. 选择项验证:")
     status_field = StringField(
         choices=['draft', 'published', 'archived'],
         error_messages={'choices': '状态必须是: draft, published, 或 archived'}
     )
-    
+
     try:
         result = status_field.validate("published")
-        print(f"  ✓ 有效状态: {result}")
+        print("  ✓ 有效状态: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
-    
+        print("  ✗ 验证失败: {}".format(e.message))
+
     try:
         status_field.validate("invalid")  # 无效选择
     except ValidationError as e:
-        print(f"  ✗ 无效状态: {e.message}")
+        print("  ✗ 无效状态: {}".format(e.message))
     
     # 3. 嵌套列表验证
     print("\n3. 嵌套列表验证:")
@@ -176,14 +226,14 @@ def example_advanced_validation():
     
     try:
         result = scores_field.validate([85, 92, 78, 96])
-        print(f"  ✓ 有效分数: {result}")
+        print("  ✓ 有效分数: {}".format(result))
     except ValidationError as e:
-        print(f"  ✗ 验证失败: {e.message}")
-    
+        print("  ✗ 验证失败: {}".format(e.message))
+
     try:
         scores_field.validate([85, 150, 78])  # 150 超出范围
     except ValidationError as e:
-        print(f"  ✗ 分数超出范围: {e.message}")
+        print("  ✗ 分数超出范围: {}".format(e.message))
 
 
 def example_optional_fields():
@@ -200,12 +250,12 @@ def example_optional_fields():
     
     print("1. 只提供必填字段:")
     product1 = Product(name="Basic Product", price=19.99)
-    print(f"  产品名称: {product1.name}")
-    print(f"  价格: ${product1.price}")
-    print(f"  描述: {product1.description}")  # 使用默认值
-    print(f"  标签: {product1.tags}")  # 使用默认值
-    print(f"  类别: {product1.category}")  # None
-    
+    print("  产品名称: {}".format(product1.name))
+    print("  价格: ${}".format(product1.price))
+    print("  描述: {}".format(product1.description))  # 使用默认值
+    print("  标签: {}".format(product1.tags))  # 使用默认值
+    print("  类别: {}".format(product1.category))  # None
+
     print("\n2. 提供所有字段:")
     product2 = Product(
         name="Premium Product",
@@ -214,11 +264,11 @@ def example_optional_fields():
         tags=["premium", "quality"],
         category="electronics"
     )
-    print(f"  产品名称: {product2.name}")
-    print(f"  价格: ${product2.price}")
-    print(f"  描述: {product2.description}")
-    print(f"  标签: {product2.tags}")
-    print(f"  类别: {product2.category}")
+    print("  产品名称: {}".format(product2.name))
+    print("  价格: ${}".format(product2.price))
+    print("  描述: {}".format(product2.description))
+    print("  标签: {}".format(product2.tags))
+    print("  类别: {}".format(product2.category))
 
 
 if __name__ == "__main__":

@@ -66,12 +66,25 @@ class TestStringField:
         assert "required" in str(exc_info.value)
     
     @pytest.mark.unit
-    def test_optional_field(self):
-        """测试可选字段"""
+    def test_optional_field_explicit(self):
+        """测试显式设置的可选字段"""
         field = StringField(required=False, default="default_value")
-        
+
         result = field.validate(None)
         assert result == "default_value"
+
+    @pytest.mark.unit
+    def test_optional_field_default(self):
+        """测试默认的可选字段行为 (required=False)"""
+        field = StringField()  # 默认 required=False
+
+        # None 应该返回 None (没有默认值)
+        result = field.validate(None)
+        assert result is None
+
+        # 有效值应该正常验证
+        result = field.validate("test")
+        assert result == "test"
     
     @pytest.mark.unit
     def test_invalid_type(self):
@@ -123,10 +136,23 @@ class TestNumberField:
     def test_invalid_type(self):
         """测试无效类型"""
         field = NumberField()
-        
+
         with pytest.raises(ValidationError) as exc_info:
             field.validate("not_a_number")
         assert "must be a number" in str(exc_info.value)
+
+    @pytest.mark.unit
+    def test_optional_field_default(self):
+        """测试默认的可选字段行为 (required=False)"""
+        field = NumberField()  # 默认 required=False
+
+        # None 应该返回 None (没有默认值)
+        result = field.validate(None)
+        assert result is None
+
+        # 有效值应该正常验证
+        result = field.validate(42)
+        assert result == 42
     
     @pytest.mark.unit
     @pytest.mark.skipif(sys.version_info[0] >= 3, reason="Python 2 specific test")
@@ -192,7 +218,20 @@ class TestListField:
     def test_invalid_list_type(self):
         """测试无效的列表类型"""
         field = ListField(item_type=str)
-        
+
         with pytest.raises(ValidationError) as exc_info:
             field.validate("not_a_list")
         assert "must be a list" in str(exc_info.value)
+
+    @pytest.mark.unit
+    def test_optional_field_default(self):
+        """测试默认的可选字段行为 (required=False)"""
+        field = ListField(item_type=str)  # 默认 required=False
+
+        # None 应该返回 None (没有默认值)
+        result = field.validate(None)
+        assert result is None
+
+        # 有效值应该正常验证
+        result = field.validate(["test", "list"])
+        assert result == ["test", "list"]

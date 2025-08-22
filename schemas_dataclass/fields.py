@@ -22,7 +22,7 @@ class ValidationError(Exception):
 class Field(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, default=None, alias=None, required=True,
+    def __init__(self, default=None, alias=None, required=False,
                  min_length=None, max_length=None,
                  minvalue=None, maxvalue=None,
                  choices=None, item_type=None, regex=None,
