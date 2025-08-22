@@ -119,7 +119,8 @@ class Field(object):
 
     def validate_required(self, value):
         """Check required and return default if not required"""
-        if value is None:
+        # 对于必填字段，None 和空字符串都是无效的
+        if value is None or (self.required and isinstance(value, string_types) and value == ""):
             if self.required:
                 error_msg = self.get_error_message('required')
                 raise ValidationError(error_msg)

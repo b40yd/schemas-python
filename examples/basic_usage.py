@@ -21,7 +21,10 @@ from schemas_dataclass import StringField, NumberField, ListField, ValidationErr
 def example_basic_fields():
     """基础字段使用示例"""
     print("=== 基础字段使用示例 ===\n")
-    
+
+    print("注意：从版本 2.0 开始，所有字段默认为可选 (required=False)")
+    print("如需必填字段，请显式设置 required=True\n")
+
     # 1. StringField 示例 (默认 required=False)
     print("1. StringField 示例 (可选字段):")
     name_field = StringField(min_length=2, max_length=50)

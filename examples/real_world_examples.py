@@ -26,11 +26,12 @@ def example_user_management_system():
     
     @dataclass
     class UserProfile(object):
-        # 基本信息
+        # 必填字段 - 基本信息
         username = StringField(
             min_length=3,
             max_length=20,
             regex=r'^[a-zA-Z][a-zA-Z0-9_]*$',
+            required=True,
             error_messages={
                 'required': '用户名是必填项',
                 'min_length': '用户名至少需要 {min_length} 个字符',
@@ -38,18 +39,20 @@ def example_user_management_system():
                 'regex': '用户名必须以字母开头，只能包含字母、数字和下划线'
             }
         )
-        
+
         email = StringField(
             regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+            required=True,
             error_messages={
                 'required': '邮箱地址是必填项',
                 'regex': '请输入有效的邮箱地址'
             }
         )
-        
+
         password = StringField(
             min_length=8,
             max_length=128,
+            required=True,
             error_messages={
                 'required': '密码是必填项',
                 'min_length': '密码至少需要 {min_length} 个字符',
@@ -57,30 +60,32 @@ def example_user_management_system():
             }
         )
         
-        # 个人信息
+        # 必填字段 - 个人信息
         first_name = StringField(
             min_length=1,
             max_length=50,
+            required=True,
             error_messages={
                 'required': '名字是必填项',
                 'max_length': '名字不能超过 {max_length} 个字符'
             }
         )
-        
+
         last_name = StringField(
             min_length=1,
             max_length=50,
+            required=True,
             error_messages={
                 'required': '姓氏是必填项',
                 'max_length': '姓氏不能超过 {max_length} 个字符'
             }
         )
-        
+
+        # 可选字段 - 个人信息
         age = NumberField(
             minvalue=13,
             maxvalue=120,
             error_messages={
-                'required': '年龄是必填项',
                 'minvalue': '年龄不能小于 {minvalue} 岁',
                 'maxvalue': '年龄不能大于 {maxvalue} 岁'
             }
@@ -127,7 +132,7 @@ def example_user_management_system():
             """检查用户名是否为保留词"""
             reserved = ['admin', 'root', 'system', 'api', 'www', 'mail', 'ftp']
             if username.lower() in reserved:
-                raise ValidationError(f"用户名 '{username}' 是系统保留词")
+                raise ValidationError("用户名 '{}' 是系统保留词".format(username))
         
         @validate("password")
         def validate_password_strength(self, password):
@@ -145,16 +150,16 @@ def example_user_management_system():
             blocked_domains = ['tempmail.com', '10minutemail.com']
             domain = email.split('@')[1].lower()
             if domain in blocked_domains:
-                raise ValidationError(f"不允许使用 {domain} 域名")
+                raise ValidationError("不允许使用 {} 域名".format(domain))
         
         # 自定义 getter 方法
         def get_full_name(self):
             """获取全名"""
-            return f"{self.first_name} {self.last_name}"
+            return "{} {}".format(self.first_name, self.last_name)
         
         def get_display_name(self):
             """获取显示名称"""
-            return f"{self.get_full_name()} (@{self.username})"
+            return "{} (@{})".format(self.get_full_name(), self.username)
         
         def get_is_admin(self):
             """检查是否为管理员"""
@@ -174,15 +179,15 @@ def example_user_management_system():
             tags=["developer", "python", "web"]
         )
         
-        print(f"  ✓ 用户创建成功!")
-        print(f"    显示名称: {user.get_display_name()}")
-        print(f"    邮箱: {user.email}")
-        print(f"    角色: {user.role}")
-        print(f"    是否管理员: {user.get_is_admin()}")
-        print(f"    标签: {user.tags}")
+        print("  ✓ 用户创建成功!")
+        print("    显示名称: {}".format(user.get_display_name()))
+        print("    邮箱: {}".format(user.email))
+        print("    角色: {}".format(user.role))
+        print("    是否管理员: {}".format(user.get_is_admin()))
+        print("    标签: {}".format(user.tags))
         
     except ValidationError as e:
-        print(f"  ✗ 用户创建失败: {e.message}")
+        print("  ✗ 用户创建失败: {}".format(e.message))
     
     print("\n2. 测试各种验证错误:")
     
@@ -197,7 +202,7 @@ def example_user_management_system():
             age=25
         )
     except ValidationError as e:
-        print(f"  ✗ 保留用户名: {e.message}")
+        print("  ✗ 保留用户名: {}".format(e.message))
     
     # 弱密码
     try:
@@ -210,7 +215,7 @@ def example_user_management_system():
             age=25
         )
     except ValidationError as e:
-        print(f"  ✗ 弱密码: {e.message}")
+        print("  ✗ 弱密码: {}".format(e.message))
 
 
 def example_ecommerce_product_system():
@@ -219,19 +224,24 @@ def example_ecommerce_product_system():
     
     @dataclass
     class ProductCategory(object):
-        name = StringField(min_length=1, max_length=50)
-        description = StringField(required=False, max_length=200)
-        parent_id = NumberField(required=False, minvalue=1)
+        # 必填字段
+        name = StringField(min_length=1, max_length=50, required=True)
+        # 可选字段
+        description = StringField(max_length=200)
+        parent_id = NumberField(minvalue=1)
     
     @dataclass
     class ProductImage(object):
+        # 必填字段
         url = StringField(
             regex=r'^https?://.+\.(jpg|jpeg|png|gif|webp)$',
+            required=True,
             error_messages={
                 'regex': '图片URL必须是有效的HTTP(S)链接，支持jpg、png、gif、webp格式'
             }
         )
-        alt_text = StringField(max_length=100, required=False)
+        # 可选字段
+        alt_text = StringField(max_length=100)
         is_primary = StringField(choices=['true', 'false'], default='false')
     
     @dataclass
@@ -392,16 +402,16 @@ def example_ecommerce_product_system():
             status="active"
         )
         
-        print(f"  ✓ 产品创建成功!")
-        print(f"    产品名称: {product.name}")
-        print(f"    价格: ¥{product.price}")
-        print(f"    折扣: {product.get_discount_percentage()}%")
-        print(f"    库存状态: {'有货' if product.get_is_in_stock() else '缺货'}")
-        print(f"    分类: {product.category.name}")
-        print(f"    主图: {product.get_primary_image().url}")
+        print("  ✓ 产品创建成功!")
+        print("    产品名称: {}".format(product.name))
+        print("    价格: ¥{}".format(product.price))
+        print("    折扣: {}%".format(product.get_discount_percentage()))
+        print("    库存状态: {}".format('有货' if product.get_is_in_stock() else '缺货'))
+        print("    分类: {}".format(product.category.name))
+        print("    主图: {}".format(product.get_primary_image().url))
         
     except ValidationError as e:
-        print(f"  ✗ 产品创建失败: {e.message}")
+        print("  ✗ 产品创建失败: {}".format(e.message))
     
     print("\n2. 测试验证错误:")
     
@@ -418,7 +428,7 @@ def example_ecommerce_product_system():
             sku="TEST001"
         )
     except ValidationError as e:
-        print(f"  ✗ 原价验证错误: {e.message}")
+        print("  ✗ 原价验证错误: {}".format(e.message))
 
 
 def example_blog_system():
@@ -525,17 +535,17 @@ def example_blog_system():
             view_count=1250
         )
         
-        print(f"  ✓ 文章创建成功!")
-        print(f"    标题: {post.title}")
-        print(f"    作者: {post.author.get_display_name()}")
-        print(f"    分类: {post.category}")
-        print(f"    标签: {', '.join(post.tags)}")
-        print(f"    字数: {post.get_word_count()}")
-        print(f"    预计阅读时间: {post.get_reading_time()} 分钟")
-        print(f"    摘要: {post.get_summary()}")
+        print("  ✓ 文章创建成功!")
+        print("    标题: {}".format(post.title))
+        print("    作者: {}".format(post.author.get_display_name()))
+        print("    分类: {}".format(post.category))
+        print("    标签: {}".format(', '.join(post.tags)))
+        print("    字数: {}".format(post.get_word_count()))
+        print("    预计阅读时间: {} 分钟".format(post.get_reading_time()))
+        print("    摘要: {}".format(post.get_summary()))
         
     except ValidationError as e:
-        print(f"  ✗ 文章创建失败: {e.message}")
+        print("  ✗ 文章创建失败: {}".format(e.message))
 
 
 if __name__ == "__main__":

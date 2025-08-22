@@ -292,13 +292,15 @@ user = User(
     tags=["developer", "python"]
 )
 
-print(f"用户: {user.username}")
-print(f"邮箱: {user.email}")
-print(f"年龄: {user.age}")
-print(f"标签: {user.tags}")
+print("用户: {}".format(user.username))
+print("邮箱: {}".format(user.email))
+print("年龄: {}".format(user.age))
+print("标签: {}".format(user.tags))
 ```
 
 ## API 参考
+
+> **重要变更说明**: 从版本 2.0 开始，所有字段默认为可选 (`required=False`)。如需必填字段，请显式设置 `required=True`。
 
 ### 字段类型
 
@@ -308,7 +310,7 @@ print(f"标签: {user.tags}")
 StringField(
     default=None,           # 默认值
     alias=None,            # 字段别名
-    required=True,         # 是否必填
+    required=False,        # 是否必填 (默认为 False)
     min_length=None,       # 最小长度
     max_length=None,       # 最大长度
     regex=None,            # 正则表达式
@@ -323,7 +325,7 @@ StringField(
 NumberField(
     default=None,           # 默认值
     alias=None,            # 字段别名
-    required=True,         # 是否必填
+    required=False,        # 是否必填 (默认为 False)
     minvalue=None,         # 最小值
     maxvalue=None,         # 最大值
     choices=None,          # 枚举选项
@@ -337,7 +339,7 @@ NumberField(
 ListField(
     default=None,           # 默认值
     alias=None,            # 字段别名
-    required=True,         # 是否必填
+    required=False,        # 是否必填 (默认为 False)
     min_length=None,       # 最小长度
     max_length=None,       # 最大长度
     item_type=None,        # 列表项类型
@@ -532,7 +534,7 @@ pip install -r requirements-dev.txt
 
 ## 许可证
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+本项目采用 GNU General Public License v3.0 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 更新日志
 

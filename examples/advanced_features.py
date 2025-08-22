@@ -43,7 +43,7 @@ def example_custom_validation():
             """用户名不能是保留词"""
             reserved_names = ['admin', 'root', 'system', 'user', 'test']
             if username.lower() in reserved_names:
-                raise ValidationError(f"用户名 '{username}' 是保留词，请选择其他用户名")
+                raise ValidationError("用户名 '{}' 是保留词，请选择其他用户名".format(username))
         
         @validate("password")
         def validate_password_strength(self, password):
@@ -63,7 +63,7 @@ def example_custom_validation():
             blocked_domains = ['tempmail.com', '10minutemail.com', 'guerrillamail.com']
             domain = email.split('@')[1].lower()
             if domain in blocked_domains:
-                raise ValidationError(f"不允许使用 {domain} 域名的邮箱")
+                raise ValidationError("不允许使用 {} 域名的邮箱".format(domain))
     
     print("1. 测试有效用户:")
     try:
@@ -73,9 +73,9 @@ def example_custom_validation():
             email="alice@example.com",
             age=25
         )
-        print(f"  ✓ 用户创建成功: {user.username}")
+        print("  ✓ 用户创建成功: {}".format(user.username))
     except ValidationError as e:
-        print(f"  ✗ 用户创建失败: {e.message}")
+        print("  ✗ 用户创建失败: {}".format(e.message))
     
     print("\n2. 测试各种验证错误:")
     
@@ -83,25 +83,25 @@ def example_custom_validation():
     try:
         User(username="alice@123", password="SecurePass123!", email="alice@example.com", age=25)
     except ValidationError as e:
-        print(f"  ✗ 用户名格式错误: {e.message}")
+        print("  ✗ 用户名格式错误: {}".format(e.message))
     
     # 保留用户名
     try:
         User(username="admin", password="SecurePass123!", email="alice@example.com", age=25)
     except ValidationError as e:
-        print(f"  ✗ 保留用户名: {e.message}")
+        print("  ✗ 保留用户名: {}".format(e.message))
     
     # 密码强度不足
     try:
         User(username="alice123", password="weakpass", email="alice@example.com", age=25)
     except ValidationError as e:
-        print(f"  ✗ 密码强度不足: {e.message}")
+        print("  ✗ 密码强度不足: {}".format(e.message))
     
     # 被阻止的邮箱域名
     try:
         User(username="alice123", password="SecurePass123!", email="alice@tempmail.com", age=25)
     except ValidationError as e:
-        print(f"  ✗ 被阻止的邮箱域名: {e.message}")
+        print("  ✗ 被阻止的邮箱域名: {}".format(e.message))
 
 
 def example_custom_getters():
@@ -124,7 +124,7 @@ def example_custom_getters():
                 'published': '[已发布]',
                 'archived': '[已归档]'
             }
-            return f"{status_prefix.get(status, '')} {title}".strip()
+            return "{} {}".format(status_prefix.get(status, ''), title).strip()
         
         def get_summary(self):
             """获取内容摘要"""
@@ -153,14 +153,14 @@ def example_custom_getters():
         view_count=150
     )
     
-    print(f"  原始标题: {post.__dict__.get('title')}")
-    print(f"  显示标题: {post.title}")  # 使用自定义 getter
-    print(f"  内容摘要: {post.summary}")  # 使用自定义 getter
-    print(f"  受欢迎程度: {post.popularity}")  # 使用自定义 getter
+    print("  原始标题: {}".format(post.__dict__.get('title')))
+    print("  显示标题: {}".format(post.title))  # 使用自定义 getter
+    print("  内容摘要: {}".format(post.get_summary()))  # 使用自定义 getter
+    print("  受欢迎程度: {}".format(post.get_popularity()))  # 使用自定义 getter
     
     print("\n2. 修改状态后的效果:")
     post.status = "archived"
-    print(f"  新的显示标题: {post.title}")
+    print("  新的显示标题: {}".format(post.title))
     
     print("\n3. 高浏览量文章:")
     popular_post = BlogPost(
@@ -169,8 +169,8 @@ def example_custom_getters():
         status="published",
         view_count=2500
     )
-    print(f"  热门文章标题: {popular_post.title}")
-    print(f"  受欢迎程度: {popular_post.popularity}")
+    print("  热门文章标题: {}".format(popular_post.title))
+    print("  受欢迎程度: {}".format(popular_post.get_popularity()))
 
 
 def example_nested_dataclass():
@@ -186,7 +186,7 @@ def example_nested_dataclass():
         
         def get_full_address(self):
             """获取完整地址"""
-            return f"{self.street}, {self.city}, {self.state} {self.zipcode}"
+            return "{}, {}, {} {}".format(self.street, self.city, self.state, self.zipcode)
     
     @dataclass
     class Person(object):
@@ -199,7 +199,7 @@ def example_nested_dataclass():
         
         def get_full_name(self):
             """获取全名"""
-            return f"{self.first_name} {self.last_name}"
+            return "{} {}".format(self.first_name, self.last_name)
     
     @dataclass
     class Company(object):
@@ -215,7 +215,7 @@ def example_nested_dataclass():
         
         def get_company_info(self):
             """获取公司信息摘要"""
-            return f"{self.name} (成立于 {self.founded_year}年，员工 {self.get_employee_count()} 人)"
+            return "{} (成立于 {}年，员工 {} 人)".format(self.name, self.founded_year, self.get_employee_count())
     
     print("1. 创建复杂的嵌套结构:")
     try:
@@ -250,16 +250,16 @@ def example_nested_dataclass():
             founded_year=2015
         )
         
-        print(f"  ✓ 公司创建成功!")
-        print(f"    公司信息: {company.get_company_info()}")
-        print(f"    公司地址: {company.address.get_full_address()}")
-        print(f"    CEO: {company.ceo.get_full_name()}")
-        print(f"    员工列表:")
+        print("  ✓ 公司创建成功!")
+        print("    公司信息: {}".format(company.get_company_info()))
+        print("    公司地址: {}".format(company.address.get_full_address()))
+        print("    CEO: {}".format(company.ceo.get_full_name()))
+        print("    员工列表:")
         for i, employee in enumerate(company.employees, 1):
-            print(f"      {i}. {employee.get_full_name()} ({employee.email})")
+            print("      {}. {} ({})".format(i, employee.get_full_name(), employee.email))
         
     except ValidationError as e:
-        print(f"  ✗ 公司创建失败: {e.message}")
+        print("  ✗ 公司创建失败: {}".format(e.message))
     
     print("\n2. 测试嵌套验证:")
     try:
@@ -277,15 +277,18 @@ def example_nested_dataclass():
             founded_year=2020
         )
     except ValidationError as e:
-        print(f"  ✗ 邮编验证失败: {e.message}")
+        print("  ✗ 邮编验证失败: {}".format(e.message))
     
     print("\n3. 测试 to_dict() 方法:")
-    company_dict = company.to_dict()
-    print(f"  公司字典结构:")
-    print(f"    名称: {company_dict['name']}")
-    print(f"    地址类型: {type(company_dict['address'])}")
-    print(f"    CEO类型: {type(company_dict['ceo'])}")
-    print(f"    员工数量: {len(company_dict['employees'])}")
+    if 'company' in locals():
+        company_dict = company.to_dict()
+        print("  公司字典结构:")
+        print("    名称: {}".format(company_dict['name']))
+        print("    地址类型: {}".format(type(company_dict['address'])))
+        print("    CEO类型: {}".format(type(company_dict['ceo'])))
+        print("    员工数量: {}".format(len(company_dict['employees'])))
+    else:
+        print("  公司对象未创建成功，跳过 to_dict() 测试")
 
 
 def example_conditional_validation():
@@ -306,7 +309,7 @@ def example_conditional_validation():
             """某些类别必须提供重量"""
             category = self.__dict__.get('category')
             if category in ['electronics', 'food'] and weight is None:
-                raise ValidationError(f"{category} 类别的产品必须提供重量")
+                raise ValidationError("{} 类别的产品必须提供重量".format(category))
         
         @validate("isbn")
         def validate_isbn_for_books(self, isbn):
@@ -328,7 +331,7 @@ def example_conditional_validation():
                     raise ValidationError("服装必须提供尺寸")
                 valid_sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
                 if size not in valid_sizes:
-                    raise ValidationError(f"尺寸必须是以下之一: {', '.join(valid_sizes)}")
+                    raise ValidationError("尺寸必须是以下之一: {}".format(', '.join(valid_sizes)))
         
         @validate("price")
         def validate_price_by_category(self, price):
@@ -349,9 +352,9 @@ def example_conditional_validation():
             price=599.99,
             weight=0.18
         )
-        print(f"  ✓ 电子产品创建成功: {electronics.name}")
+        print("  ✓ 电子产品创建成功: {}".format(electronics.name))
     except ValidationError as e:
-        print(f"  ✗ 电子产品创建失败: {e.message}")
+        print("  ✗ 电子产品创建失败: {}".format(e.message))
     
     # 书籍 - 需要 ISBN
     try:
@@ -361,9 +364,9 @@ def example_conditional_validation():
             price=49.99,
             isbn="978-0-123456-78-9"
         )
-        print(f"  ✓ 书籍创建成功: {book.name}")
+        print("  ✓ 书籍创建成功: {}".format(book.name))
     except ValidationError as e:
-        print(f"  ✗ 书籍创建失败: {e.message}")
+        print("  ✗ 书籍创建失败: {}".format(e.message))
     
     # 服装 - 需要尺寸
     try:
@@ -373,9 +376,9 @@ def example_conditional_validation():
             price=29.99,
             size="M"
         )
-        print(f"  ✓ 服装创建成功: {clothing.name}")
+        print("  ✓ 服装创建成功: {}".format(clothing.name))
     except ValidationError as e:
-        print(f"  ✗ 服装创建失败: {e.message}")
+        print("  ✗ 服装创建失败: {}".format(e.message))
     
     print("\n2. 测试条件验证错误:")
     
@@ -383,19 +386,19 @@ def example_conditional_validation():
     try:
         Product(name="平板电脑", category="electronics", price=299.99)
     except ValidationError as e:
-        print(f"  ✗ 电子产品缺少重量: {e.message}")
+        print("  ✗ 电子产品缺少重量: {}".format(e.message))
     
     # 书籍缺少 ISBN
     try:
         Product(name="小说", category="books", price=19.99)
     except ValidationError as e:
-        print(f"  ✗ 书籍缺少 ISBN: {e.message}")
+        print("  ✗ 书籍缺少 ISBN: {}".format(e.message))
     
     # 服装缺少尺寸
     try:
         Product(name="牛仔裤", category="clothing", price=79.99)
     except ValidationError as e:
-        print(f"  ✗ 服装缺少尺寸: {e.message}")
+        print("  ✗ 服装缺少尺寸: {}".format(e.message))
 
 
 if __name__ == "__main__":

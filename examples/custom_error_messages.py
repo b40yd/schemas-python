@@ -49,9 +49,9 @@ def example_basic_custom_messages():
     for test_value, description in test_cases:
         try:
             username_field.validate(test_value)
-            print(f"  ✓ {description}: 验证通过")
+            print("  ✓ {}: 验证通过".format(description))
         except ValidationError as e:
-            print(f"  ✗ {description}: {e.message}")
+            print("  ✗ {}: {}".format(description, e.message))
     
     # 2. 自定义数字字段错误消息
     print("\n2. 自定义数字字段错误消息:")
@@ -75,9 +75,9 @@ def example_basic_custom_messages():
     for test_value, description in test_cases:
         try:
             age_field.validate(test_value)
-            print(f"  ✓ {description}: 验证通过")
+            print("  ✓ {}: 验证通过".format(description))
         except ValidationError as e:
-            print(f"  ✗ {description}: {e.message}")
+            print("  ✗ {}: {}".format(description, e.message))
     
     # 3. 自定义列表字段错误消息
     print("\n3. 自定义列表字段错误消息:")
@@ -101,9 +101,9 @@ def example_basic_custom_messages():
     for test_value, description in test_cases:
         try:
             tags_field.validate(test_value)
-            print(f"  ✓ {description}: 验证通过")
+            print("  ✓ {}: 验证通过".format(description))
         except ValidationError as e:
-            print(f"  ✗ {description}: {e.message}")
+            print("  ✗ {}: {}".format(description, e.message))
 
 
 def example_multilingual_messages():
@@ -129,9 +129,9 @@ def example_multilingual_messages():
     for value in test_values:
         try:
             result = chinese_field.validate(value)
-            print(f"  ✓ '{value}' 验证通过")
+            print("  ✓ '{}' 验证通过".format(value))
         except ValidationError as e:
-            print(f"  ✗ '{value}' 验证失败: {e.message}")
+            print("  ✗ '{}' 验证失败: {}".format(value, e.message))
     
     # 英文错误消息
     print("\n2. 英文错误消息:")
@@ -151,9 +151,9 @@ def example_multilingual_messages():
     for value in test_values:
         try:
             result = english_field.validate(value)
-            print(f"  ✓ '{value}' validation passed")
+            print("  ✓ '{}' validation passed".format(value))
         except ValidationError as e:
-            print(f"  ✗ '{value}' validation failed: {e.message}")
+            print("  ✗ '{}' validation failed: {}".format(value, e.message))
 
 
 def example_dataclass_custom_messages():
@@ -216,25 +216,25 @@ def example_dataclass_custom_messages():
     try:
         User(username="ab", age=25, email="test@example.com")
     except ValidationError as e:
-        print(f"  ✗ 用户名长度错误: {e.message}")
+        print("  ✗ 用户名长度错误: {}".format(e.message))
     
     # 年龄错误
     try:
         User(username="testuser", age=150, email="test@example.com")
     except ValidationError as e:
-        print(f"  ✗ 年龄范围错误: {e.message}")
+        print("  ✗ 年龄范围错误: {}".format(e.message))
     
     # 邮箱错误
     try:
         User(username="testuser", age=25, email="invalid-email")
     except ValidationError as e:
-        print(f"  ✗ 邮箱格式错误: {e.message}")
+        print("  ✗ 邮箱格式错误: {}".format(e.message))
     
     # 标签错误
     try:
         User(username="testuser", age=25, email="test@example.com", tags=[])
     except ValidationError as e:
-        print(f"  ✗ 标签数量错误: {e.message}")
+        print("  ✗ 标签数量错误: {}".format(e.message))
     
     print("\n2. 成功创建用户:")
     try:
@@ -244,13 +244,13 @@ def example_dataclass_custom_messages():
             email="alice@example.com",
             tags=["developer", "python"]
         )
-        print(f"  ✓ 用户创建成功!")
-        print(f"    用户名: {user.username}")
-        print(f"    年龄: {user.age}")
-        print(f"    邮箱: {user.email}")
-        print(f"    标签: {user.tags}")
+        print("  ✓ 用户创建成功!")
+        print("    用户名: {}".format(user.username))
+        print("    年龄: {}".format(user.age))
+        print("    邮箱: {}".format(user.email))
+        print("    标签: {}".format(user.tags))
     except ValidationError as e:
-        print(f"  ✗ 用户创建失败: {e.message}")
+        print("  ✗ 用户创建失败: {}".format(e.message))
 
 
 def example_advanced_formatting():
@@ -281,9 +281,9 @@ def example_advanced_formatting():
     for password, description in test_passwords:
         try:
             result = password_field.validate(password)
-            print(f"  ✓ {description}: 验证通过")
+            print("  ✓ {}: 验证通过".format(description))
         except ValidationError as e:
-            print(f"  ✗ {description}: {e.message}")
+            print("  ✗ {}: {}".format(description, e.message))
     
     # 2. 格式化参数缺失处理
     print("\n2. 格式化参数缺失处理:")
@@ -297,7 +297,7 @@ def example_advanced_formatting():
     try:
         field_with_missing_param.validate("abc")
     except ValidationError as e:
-        print(f"  ✗ 格式化失败时返回原始模板: {e.message}")
+        print("  ✗ 格式化失败时返回原始模板: {}".format(e.message))
 
 
 def example_business_scenarios():
@@ -351,9 +351,9 @@ def example_business_scenarios():
             category="电子产品",
             sku="EL123456"
         )
-        print(f"  ✓ 产品创建成功: {product.name}")
+        print("  ✓ 产品创建成功: {}".format(product.name))
     except ValidationError as e:
-        print(f"  ✗ 产品创建失败: {e.message}")
+        print("  ✗ 产品创建失败: {}".format(e.message))
     
     # 各种错误情况
     error_cases = [
@@ -366,9 +366,9 @@ def example_business_scenarios():
     for product_data, description in error_cases:
         try:
             Product(**product_data)
-            print(f"  ✓ {description}: 验证通过")
+            print("  ✓ {}: 验证通过".format(description))
         except ValidationError as e:
-            print(f"  ✗ {description}: {e.message}")
+            print("  ✗ {}: {}".format(description, e.message))
 
 
 if __name__ == "__main__":
