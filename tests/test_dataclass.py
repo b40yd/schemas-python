@@ -308,3 +308,10 @@ class TestCustomGetters:
         # 但直接访问 __dict__ 应该显示实际存储的值
         assert obj.__dict__.get("value") is "default"
         assert obj.__dict__.get("description") is None  # 没有设置实际值
+
+        @dataclass
+        class Test1Class(object):
+            value = StringField(required=True)
+
+        obj = Test1Class()
+        assert obj.value == None

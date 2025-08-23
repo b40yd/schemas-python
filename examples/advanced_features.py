@@ -335,9 +335,9 @@ def example_conditional_validation():
         name = StringField(min_length=1, max_length=100)
         category = StringField(choices=["electronics", "clothing", "books", "food"])
         price = NumberField(minvalue=0.01)
-        weight = NumberField(minvalue=0.01, required=False)  # 某些类别需要重量
-        isbn = StringField(required=False)  # 书籍需要 ISBN
-        size = StringField(required=False)  # 服装需要尺寸
+        weight = NumberField(minvalue=0.01, required=True)  # 某些类别需要重量
+        isbn = StringField(required=True)  # 书籍需要 ISBN
+        size = StringField(required=True)  # 服装需要尺寸
 
         @validate("weight")
         def validate_weight_for_category(self, weight):
@@ -387,7 +387,7 @@ def example_conditional_validation():
     # 电子产品 - 需要重量
     try:
         electronics = Product(
-            name="智能手机", category="electronics", price=599.99, weight=0.18
+            name="智能手机", category="electronics", price=599.99, weight=0.18, isbn="978-0-123456-78-9", size="M"
         )
         print("  ✓ 电子产品创建成功: {}".format(electronics.name))
     except ValidationError as e:
@@ -399,7 +399,9 @@ def example_conditional_validation():
             name="Python 编程指南",
             category="books",
             price=49.99,
+            weight=0.18,
             isbn="978-0-123456-78-9",
+            size="M"
         )
         print("  ✓ 书籍创建成功: {}".format(book.name))
     except ValidationError as e:
@@ -407,7 +409,7 @@ def example_conditional_validation():
 
     # 服装 - 需要尺寸
     try:
-        clothing = Product(name="T恤", category="clothing", price=29.99, size="M")
+        clothing = Product(name="T恤", category="clothing", price=29.99, size="M", isbn="978-0-123456-78-9", weight=0.18,)
         print("  ✓ 服装创建成功: {}".format(clothing.name))
     except ValidationError as e:
         print("  ✗ 服装创建失败: {}".format(e.message))
@@ -416,19 +418,19 @@ def example_conditional_validation():
 
     # 电子产品缺少重量
     try:
-        Product(name="平板电脑", category="electronics", price=299.99)
+        Product(name="平板电脑", category="electronics", price=299.99, isbn="978-0-123456-78-9", size="M")
     except ValidationError as e:
         print("  ✗ 电子产品缺少重量: {}".format(e.message))
 
     # 书籍缺少 ISBN
     try:
-        Product(name="小说", category="books", price=19.99)
+        Product(name="小说", category="books", price=19.99, weight=0.18, size="M")
     except ValidationError as e:
         print("  ✗ 书籍缺少 ISBN: {}".format(e.message))
 
     # 服装缺少尺寸
     try:
-        Product(name="牛仔裤", category="clothing", price=79.99)
+        Product(name="牛仔裤", category="clothing", price=79.99, weight=0.18, isbn="978-0-123456-78-9")
     except ValidationError as e:
         print("  ✗ 服装缺少尺寸: {}".format(e.message))
 
