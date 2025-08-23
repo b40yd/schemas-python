@@ -28,7 +28,7 @@ class Field(object):
         item_type=None,
         regex=None,
         error_messages=None,
-        **kwargs,
+        **kwargs
     ):
         """
         增强型字段验证基类
