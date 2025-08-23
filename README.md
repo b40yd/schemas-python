@@ -2,8 +2,8 @@
 
 [![Python Version](https://img.shields.io/badge/python-2.7%2B%2C%203.4%2B-blue.svg)](https://pypi.org/project/schemas-dataclass/)
 [![License](https://img.shields.io/badge/license-GPLv3-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/schemas/dataclass)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/schemas/dataclass)
+[![CI](https://github.com/b40yd/schemas-python/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/b40yd/schemas-python/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/b40yd/9d999999999999999999999999999999/raw/coverage.json)](#)
 
 一个专为 Python 2/3 兼容设计的 DataClass 库，支持完整的数据校验功能、装饰器语法和自定义错误消息。
 

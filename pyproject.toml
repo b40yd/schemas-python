@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "schemas-dataclass"
@@ -9,10 +9,10 @@ description = "Python 2/3 兼容的 DataClass 库，支持完整的数据校验�
 readme = "README.md"
 license = "GPL-3.0-or-later"
 authors = [
-    {name = "Schemas DataClass Team", email = "support@schemas-dataclass.com"}
+    {name = "Schemas DataClass Team", email = "bb.qnyd@gmail.com"}
 ]
 maintainers = [
-    {name = "Schemas DataClass Team", email = "support@schemas-dataclass.com"}
+    {name = "Schemas DataClass Team", email = "bb.qnyd@gmail.com"}
 ]
 keywords = ["dataclass", "validation", "python2", "python3", "schema", "fields"]
 classifiers = [
@@ -67,8 +67,6 @@ Repository = "https://github.com/schemas/dataclass.git"
 Changelog = "https://github.com/schemas/dataclass/blob/main/CHANGELOG.md"
 
 
-[tool.setuptools.packages.find]
-include = ["schemas_dataclass*"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["schemas_dataclass"]
