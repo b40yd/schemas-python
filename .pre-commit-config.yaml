@@ -10,14 +10,6 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # See: https://github.com/astral-sh/ruff-pre-commit/tags
-    rev: v0.4.10
-    hooks:
-      - id: ruff
-        args: ["--fix"]
-      - id: ruff-format
-
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:

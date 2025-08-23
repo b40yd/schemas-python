@@ -13,9 +13,15 @@ import sys
 import os
 
 # 添加项目根目录到 Python 路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from schemas_dataclass import StringField, NumberField, ListField, ValidationError, dataclass
+from schemas_dataclass import (
+    StringField,
+    NumberField,
+    ListField,
+    ValidationError,
+    dataclass,
+)
 
 
 def example_basic_fields():
@@ -60,7 +66,7 @@ def example_basic_fields():
         required_name_field.validate(None)  # 必填字段，None 无效
     except ValidationError as e:
         print("  ✗ 必填字段为空: {}".format(e.message))
-    
+
     # 2. NumberField 示例 (默认 required=False)
     print("\n2. NumberField 示例 (可选字段):")
     age_field = NumberField(minvalue=0, maxvalue=120)
@@ -76,7 +82,7 @@ def example_basic_fields():
         print("  ✓ 可选年龄字段为空: {}".format(result))
     except ValidationError as e:
         print("  ✗ 验证失败: {}".format(e.message))
-    
+
     try:
         age_field.validate(150)  # 太大
     except ValidationError as e:
@@ -101,26 +107,25 @@ def example_basic_fields():
 def example_dataclass_basic():
     """基础 dataclass 示例"""
     print("\n=== 基础 DataClass 示例 ===\n")
-    
+
     @dataclass
     class User(object):
         # 必填字段
         name = StringField(min_length=2, max_length=50, required=True)
         email = StringField(
-            regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-            required=True
+            regex=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", required=True
         )
         # 可选字段 (默认 required=False)
         age = NumberField(minvalue=0, maxvalue=120)
         tags = ListField(item_type=str)
-    
+
     print("1. 创建有效用户 (包含所有字段):")
     try:
         user = User(
             name="Alice Smith",
             age=28,
             email="alice@example.com",
-            tags=["developer", "python"]
+            tags=["developer", "python"],
         )
         print("  ✓ 用户创建成功!")
         print("    姓名: {}".format(user.name))
@@ -144,7 +149,7 @@ def example_dataclass_basic():
         print("    标签: {}".format(user.tags))  # 应该是 None
     except ValidationError as e:
         print("  ✗ 用户创建失败: {}".format(e.message))
-    
+
     print("\n2. 测试验证错误:")
     try:
         User(name="A", email="alice@example.com")  # 姓名太短
@@ -165,14 +170,18 @@ def example_dataclass_basic():
         User(name="David")  # 缺少必填的邮箱字段
     except ValidationError as e:
         print("  ✗ 缺少必填字段: {}".format(e.message))
-    
+
     print("\n3. 字段访问方式:")
     user = User(name="David", age=35, email="david@example.com")
-    
+
     print("  属性访问: user.name = {}".format(user.name))
-    print("  索引访问: user['name'] = {}".format(user['name']))
-    print("  get方法访问: user.get('name') = {}".format(user.get('name')))
-    print("  get方法默认值: user.get('nonexistent', 'default') = {}".format(user.get('nonexistent', 'default')))
+    print("  索引访问: user['name'] = {}".format(user["name"]))
+    print("  get方法访问: user.get('name') = {}".format(user.get("name")))
+    print(
+        "  get方法默认值: user.get('nonexistent', 'default') = {}".format(
+            user.get("nonexistent", "default")
+        )
+    )
 
     print("\n4. to_dict() 方法:")
     user_dict = user.to_dict()
@@ -182,14 +191,13 @@ def example_dataclass_basic():
 def example_advanced_validation():
     """高级验证示例"""
     print("\n=== 高级验证示例 ===\n")
-    
+
     # 1. 正则表达式验证
     print("1. 正则表达式验证:")
     phone_field = StringField(
-        regex=r'^\d{3}-\d{3}-\d{4}$',
-        error_messages={'regex': '电话号码格式应为: XXX-XXX-XXXX'}
+        regex=r"^\d{3}-\d{3}-\d{4}$", error_messages={"regex": "电话号码格式应为: XXX-XXX-XXXX"}
     )
-    
+
     try:
         result = phone_field.validate("123-456-7890")
         print("  ✓ 有效电话: {}".format(result))
@@ -204,8 +212,8 @@ def example_advanced_validation():
     # 2. 选择项验证
     print("\n2. 选择项验证:")
     status_field = StringField(
-        choices=['draft', 'published', 'archived'],
-        error_messages={'choices': '状态必须是: draft, published, 或 archived'}
+        choices=["draft", "published", "archived"],
+        error_messages={"choices": "状态必须是: draft, published, 或 archived"},
     )
 
     try:
@@ -218,15 +226,13 @@ def example_advanced_validation():
         status_field.validate("invalid")  # 无效选择
     except ValidationError as e:
         print("  ✗ 无效状态: {}".format(e.message))
-    
+
     # 3. 嵌套列表验证
     print("\n3. 嵌套列表验证:")
     scores_field = ListField(
-        item_type=NumberField(minvalue=0, maxvalue=100),
-        min_length=1,
-        max_length=10
+        item_type=NumberField(minvalue=0, maxvalue=100), min_length=1, max_length=10
     )
-    
+
     try:
         result = scores_field.validate([85, 92, 78, 96])
         print("  ✓ 有效分数: {}".format(result))
@@ -242,7 +248,7 @@ def example_advanced_validation():
 def example_optional_fields():
     """可选字段示例"""
     print("\n=== 可选字段示例 ===\n")
-    
+
     @dataclass
     class Product(object):
         name = StringField(min_length=1, max_length=100)
@@ -250,7 +256,7 @@ def example_optional_fields():
         description = StringField(required=False, default="No description")
         tags = ListField(item_type=str, required=False, default=lambda: [])
         category = StringField(required=False)
-    
+
     print("1. 只提供必填字段:")
     product1 = Product(name="Basic Product", price=19.99)
     print("  产品名称: {}".format(product1.name))
@@ -265,7 +271,7 @@ def example_optional_fields():
         price=99.99,
         description="High-quality premium product",
         tags=["premium", "quality"],
-        category="electronics"
+        category="electronics",
     )
     print("  产品名称: {}".format(product2.name))
     print("  价格: ${}".format(product2.price))
@@ -277,12 +283,12 @@ def example_optional_fields():
 if __name__ == "__main__":
     print("Schemas DataClass - 基础使用示例")
     print("=" * 50)
-    
+
     example_basic_fields()
     example_dataclass_basic()
     example_advanced_validation()
     example_optional_fields()
-    
+
     print("\n" + "=" * 50)
     print("示例运行完成！")
     print("\n更多示例请查看 examples/ 目录下的其他文件。")
