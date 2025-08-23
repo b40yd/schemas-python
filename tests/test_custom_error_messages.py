@@ -208,7 +208,8 @@ class TestErrorMessageFormatting:
     def test_missing_parameter_handling(self):
         """测试缺失参数处理"""
         field = StringField(
-            min_length=5, error_messages={"min_length": "长度至少 {missing_param} 个字符"}
+            min_length=5,
+            error_messages={"min_length": "长度至少 {missing_param} 个字符"},
         )
 
         # 格式化失败时应返回原始模板

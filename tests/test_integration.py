@@ -153,7 +153,11 @@ class TestNestedDataClass:
                     "city": "Bad City",
                     "zipcode": "12345",
                 },
-                ceo={"name": "John123", "age": 40, "email": "john@example.com"},  # 包含数字
+                ceo={
+                    "name": "John123",
+                    "age": 40,
+                    "email": "john@example.com",
+                },  # 包含数字
                 employees=[],
             )
         assert "must contain only letters and spaces" in str(exc_info.value)

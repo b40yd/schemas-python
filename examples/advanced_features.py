@@ -48,7 +48,9 @@ def example_custom_validation():
             """用户名不能是保留词"""
             reserved_names = ["admin", "root", "system", "user", "test"]
             if username.lower() in reserved_names:
-                raise ValidationError("用户名 '{}' 是保留词，请选择其他用户名".format(username))
+                raise ValidationError(
+                    "用户名 '{}' 是保留词，请选择其他用户名".format(username)
+                )
 
         @validate("password")
         def validate_password_strength(self, password):
@@ -143,7 +145,11 @@ def example_custom_getters():
             """自定义标题获取方法 - 添加状态前缀"""
             title = self.__dict__.get("title", "")
             status = self.__dict__.get("status", "draft")
-            status_prefix = {"draft": "[草稿]", "published": "[已发布]", "archived": "[已归档]"}
+            status_prefix = {
+                "draft": "[草稿]",
+                "published": "[已发布]",
+                "archived": "[已归档]",
+            }
             return "{} {}".format(status_prefix.get(status, ""), title).strip()
 
         def get_summary(self):
@@ -184,7 +190,10 @@ def example_custom_getters():
 
     print("\n3. 高浏览量文章:")
     popular_post = BlogPost(
-        title="热门文章", content="这是一篇热门文章", status="published", view_count=2500
+        title="热门文章",
+        content="这是一篇热门文章",
+        status="published",
+        view_count=2500,
     )
     print("  热门文章标题: {}".format(popular_post.title))
     print("  受欢迎程度: {}".format(popular_post.get_popularity()))
@@ -387,7 +396,10 @@ def example_conditional_validation():
     # 书籍 - 需要 ISBN
     try:
         book = Product(
-            name="Python 编程指南", category="books", price=49.99, isbn="978-0-123456-78-9"
+            name="Python 编程指南",
+            category="books",
+            price=49.99,
+            isbn="978-0-123456-78-9",
         )
         print("  ✓ 书籍创建成功: {}".format(book.name))
     except ValidationError as e:

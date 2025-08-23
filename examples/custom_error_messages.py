@@ -72,7 +72,11 @@ def example_basic_custom_messages():
         },
     )
 
-    test_cases = [(-5, "年龄为负数"), (150, "年龄超出范围"), ("not_a_number", "年龄类型错误")]
+    test_cases = [
+        (-5, "年龄为负数"),
+        (150, "年龄超出范围"),
+        ("not_a_number", "年龄类型错误"),
+    ]
 
     for test_value, description in test_cases:
         try:
@@ -291,7 +295,9 @@ def example_advanced_formatting():
     print("\n2. 格式化参数缺失处理:")
     field_with_missing_param = StringField(
         min_length=5,
-        error_messages={"min_length": "长度至少 {missing_param} 个字符"},  # 故意使用错误的参数名
+        error_messages={
+            "min_length": "长度至少 {missing_param} 个字符"
+        },  # 故意使用错误的参数名
     )
 
     try:
@@ -327,7 +333,10 @@ def example_business_scenarios():
 
         category = StringField(
             choices=["电子产品", "服装", "食品", "图书", "家居"],
-            error_messages={"required": "请选择产品类别", "choices": "产品类别必须是以下之一: {choices}"},
+            error_messages={
+                "required": "请选择产品类别",
+                "choices": "产品类别必须是以下之一: {choices}",
+            },
         )
 
         sku = StringField(
@@ -342,17 +351,41 @@ def example_business_scenarios():
 
     # 成功创建
     try:
-        product = Product(name="智能手机", price=2999.99, category="电子产品", sku="EL123456")
+        product = Product(
+            name="智能手机", price=2999.99, category="电子产品", sku="EL123456"
+        )
         print("  ✓ 产品创建成功: {}".format(product.name))
     except ValidationError as e:
         print("  ✗ 产品创建失败: {}".format(e.message))
 
     # 各种错误情况
     error_cases = [
-        ({"name": "", "price": 100, "category": "电子产品", "sku": "EL123456"}, "产品名称为空"),
-        ({"name": "测试产品", "price": 0, "category": "电子产品", "sku": "EL123456"}, "价格为0"),
-        ({"name": "测试产品", "price": 100, "category": "无效类别", "sku": "EL123456"}, "无效类别"),
-        ({"name": "测试产品", "price": 100, "category": "电子产品", "sku": "invalid"}, "无效SKU"),
+        (
+            {"name": "", "price": 100, "category": "电子产品", "sku": "EL123456"},
+            "产品名称为空",
+        ),
+        (
+            {"name": "测试产品", "price": 0, "category": "电子产品", "sku": "EL123456"},
+            "价格为0",
+        ),
+        (
+            {
+                "name": "测试产品",
+                "price": 100,
+                "category": "无效类别",
+                "sku": "EL123456",
+            },
+            "无效类别",
+        ),
+        (
+            {
+                "name": "测试产品",
+                "price": 100,
+                "category": "电子产品",
+                "sku": "invalid",
+            },
+            "无效SKU",
+        ),
     ]
 
     for product_data, description in error_cases:

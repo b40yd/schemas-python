@@ -139,7 +139,7 @@ def example_dataclass_basic():
     try:
         user = User(
             name="Bob Johnson",
-            email="bob@example.com"
+            email="bob@example.com",
             # age 和 tags 是可选的，可以不提供
         )
         print("  ✓ 用户创建成功!")
@@ -195,7 +195,8 @@ def example_advanced_validation():
     # 1. 正则表达式验证
     print("1. 正则表达式验证:")
     phone_field = StringField(
-        regex=r"^\d{3}-\d{3}-\d{4}$", error_messages={"regex": "电话号码格式应为: XXX-XXX-XXXX"}
+        regex=r"^\d{3}-\d{3}-\d{4}$",
+        error_messages={"regex": "电话号码格式应为: XXX-XXX-XXXX"},
     )
 
     try:

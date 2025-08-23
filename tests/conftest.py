@@ -99,7 +99,10 @@ def sample_dataclass_with_custom_errors():
 
         category = StringField(
             choices=["电子产品", "服装", "食品", "图书"],
-            error_messages={"required": "请选择产品类别", "choices": "产品类别必须是以下之一: {choices}"},
+            error_messages={
+                "required": "请选择产品类别",
+                "choices": "产品类别必须是以下之一: {choices}",
+            },
         )
 
     return Product

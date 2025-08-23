@@ -50,7 +50,10 @@ def example_user_management_system():
         email = StringField(
             regex=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
             required=True,
-            error_messages={"required": "邮箱地址是必填项", "regex": "请输入有效的邮箱地址"},
+            error_messages={
+                "required": "邮箱地址是必填项",
+                "regex": "请输入有效的邮箱地址",
+            },
         )
 
         password = StringField(
@@ -234,7 +237,9 @@ def example_ecommerce_product_system():
         url = StringField(
             regex=r"^https?://.+\.(jpg|jpeg|png|gif|webp)$",
             required=True,
-            error_messages={"regex": "图片URL必须是有效的HTTP(S)链接，支持jpg、png、gif、webp格式"},
+            error_messages={
+                "regex": "图片URL必须是有效的HTTP(S)链接，支持jpg、png、gif、webp格式"
+            },
         )
         # 可选字段
         alt_text = StringField(max_length=100)
@@ -265,7 +270,10 @@ def example_ecommerce_product_system():
         # 价格信息
         price = NumberField(
             minvalue=0.01,
-            error_messages={"required": "价格是必填项", "minvalue": "价格必须大于 {minvalue} 元"},
+            error_messages={
+                "required": "价格是必填项",
+                "minvalue": "价格必须大于 {minvalue} 元",
+            },
         )
 
         original_price = NumberField(
@@ -277,7 +285,10 @@ def example_ecommerce_product_system():
         # 库存信息
         stock_quantity = NumberField(
             minvalue=0,
-            error_messages={"required": "库存数量是必填项", "minvalue": "库存数量不能小于 {minvalue}"},
+            error_messages={
+                "required": "库存数量是必填项",
+                "minvalue": "库存数量不能小于 {minvalue}",
+            },
         )
 
         # 分类和标签
@@ -305,7 +316,10 @@ def example_ecommerce_product_system():
         # 产品属性
         sku = StringField(
             regex=r"^[A-Z0-9]{6,12}$",
-            error_messages={"required": "SKU是必填项", "regex": "SKU必须是6-12位大写字母和数字组合"},
+            error_messages={
+                "required": "SKU是必填项",
+                "regex": "SKU必须是6-12位大写字母和数字组合",
+            },
         )
 
         status = StringField(
@@ -386,7 +400,9 @@ def example_ecommerce_product_system():
         print("    产品名称: {}".format(product.name))
         print("    价格: ¥{}".format(product.price))
         print("    折扣: {}%".format(product.get_discount_percentage()))
-        print("    库存状态: {}".format("有货" if product.get_is_in_stock() else "缺货"))
+        print(
+            "    库存状态: {}".format("有货" if product.get_is_in_stock() else "缺货")
+        )
         print("    分类: {}".format(product.category.name))
         print("    主图: {}".format(product.get_primary_image().url))
 
@@ -448,7 +464,10 @@ def example_blog_system():
 
         category = StringField(
             choices=["技术", "生活", "旅行", "美食", "读书"],
-            error_messages={"required": "请选择文章分类", "choices": "分类必须是: {choices}"},
+            error_messages={
+                "required": "请选择文章分类",
+                "choices": "分类必须是: {choices}",
+            },
         )
 
         tags = ListField(
@@ -497,7 +516,8 @@ def example_blog_system():
     try:
         post = BlogPost(
             title="Python DataClass 完全指南",
-            content="在这篇文章中，我们将深入探讨Python DataClass的使用方法和最佳实践。" * 10,
+            content="在这篇文章中，我们将深入探讨Python DataClass的使用方法和最佳实践。"
+            * 10,
             author={
                 "name": "张三",
                 "email": "zhangsan@example.com",
