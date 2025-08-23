@@ -310,8 +310,144 @@ class TestCustomGetters:
         assert obj.__dict__.get("description") is None  # 没有设置实际值
 
         @dataclass
+        class Test2Class(object):
+            value = StringField(default="default")
+            description = StringField()
+
+        @dataclass
+        class Test3Class(object):
+            say_hello = StringField(required=True)
+
+        @dataclass
         class Test1Class(object):
             value = StringField(required=True)
+            demo = Test2Class
+            demo1 = Test2Class()
+            demo3 = Test3Class
 
-        obj = Test1Class()
-        assert obj.value == None
+
+        obj = Test1Class(value="123", demo3={"say_hello": "hello,world"})
+        assert obj.value == "123"
+
+        obj = Test1Class(value="123", demo={"value": "demo", "description": "hello"}, demo3={"say_hello": "hello,world"})
+        assert obj.value == "123"
+        assert obj.demo.description == "hello"
+        assert obj.demo.value == "demo"
+        assert obj.demo1.description == None
+        assert obj.demo1.value == "default"
+        assert obj.demo3.say_hello == "hello,world"
+        
+
+        try:
+            obj.demo3={"say_hello": 1}
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        try:
+            obj.demo3.say_hello = None
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        obj.demo3.say_hello = "hello,Boss"
+        assert obj.demo3.say_hello == "hello,Boss"
+
+        obj.demo3={"say_hello": "hello,Boss1"}
+        assert obj.demo3.say_hello == "hello,Boss1"
+
+        # 测试3: 类属性，测试复制校验
+        obj = Test1Class(value="123", demo1={"value": "demo1", "description": "hello1"}, demo3={"say_hello": "hello,world"})
+        assert obj.demo1.description == "hello1"
+        assert obj.demo1.value == "demo1"
+        assert obj.demo.description == None
+        assert obj.demo.value == "default"
+
+        # ✅ 测试：修改嵌套字段值（触发校验）
+        try:
+            obj.demo.value = 1
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass  # OK
+
+        try:
+            obj.demo1.value = 1
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass  # OK
+
+        # 测试4: 实例赋值
+        try:
+            obj.demo = {"value": "demo", "description": 1}
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        obj.demo = {"value": "demo", "description": "hello"}
+        assert obj.demo.value == "demo"
+        assert obj.demo.description == "hello"
+
+         # 测试：重新赋值触发校验
+        try:
+            obj.value = None
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        try:
+            obj.value = 1  # StringField 不接受 int
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        obj.demo = Test2Class(value="new", description="world")
+        assert obj.demo.value == "new"
+        assert obj.demo.description == "world"
+
+        # 测试：重新赋值触发校验
+        try:
+            obj.value = None
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        try:
+            obj.value = 1  # StringField 不接受 int
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+        
+        # ✅ 测试5：修改嵌套字段值（触发校验）
+        try:
+            obj.demo.value = 1
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass  # OK
+
+        try:
+            obj.demo1.value = 1
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass  # OK
+
+        # ✅ 测试6：直接赋实例
+        inner = Test2Class(value="direct")
+        obj.demo = inner
+        assert obj.demo.value == "direct"
+
+        # ✅ 测试7：赋无效实例
+        try:
+            obj.demo = Test2Class(value=1)  # StringField 不接受 int
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        obj.value = "new"
+        assert obj.value == "new"
+        obj.demo1.value = "newdemo1"
+        assert obj.demo1.value == "newdemo1"
+
+        obj.demo.value = "newdemo"
+        assert obj.demo.value == "newdemo"
+        
+

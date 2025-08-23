@@ -10,6 +10,9 @@ INIT_FLAG = "_initializing"
 IN_GETTER = "_in_getter"
 CUSTOM_GET_VALUE_FUNCTION_NAME_PREFIX = "get_"
 
+FIELD_OBJECT = '_object'
+FIELD_INSTANCE = '_instance'
+
 def validate(field_name):
     """
     装饰器：为指定字段添加自定义验证函数
@@ -77,7 +80,6 @@ def dataclass(cls=None, **kwargs):
 
 
 # ================== 收集逻辑 ==================
-
 def _collect_fields(cls):
     """收集所有 Field 字段"""
     fields = {}
@@ -96,7 +98,9 @@ def _collect_fields(cls):
             val.name = key
             fields[key] = val
         elif isinstance(val, type) and hasattr(val, DATACLASS_FIELDS):
-            fields[key] = val  # 嵌套 dataclass
+            fields[key] = (FIELD_OBJECT, val)
+        elif hasattr(val, DATACLASS_FIELDS):
+            fields[key] = (FIELD_INSTANCE, val.__class__, val)
     return fields
 
 
@@ -129,8 +133,6 @@ def _collect_validators(cls):
     return validators
 
 
-# ================== 工厂函数 ==================
-
 def _make_get_field_value():
     def _get_field_value(self, key):
         try:
@@ -139,12 +141,14 @@ def _make_get_field_value():
             fields = getattr(self, DATACLASS_FIELDS, {})
             if key in fields:
                 field = fields[key]
-                if isinstance(field, Field):
+                if isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
+                    return field[2]  # 返回默认实例
+                elif isinstance(field, Field):
                     return field.get_default()
                 return None
             if key in self.__dict__:
                 return self.__dict__[key]
-            raise KeyError("Field '%s' not found" % key)
+            raise KeyError("Field '{}' not found".format(key))
     return _get_field_value
 
 def _make_getattribute(getters):
@@ -170,7 +174,12 @@ def _make_getattribute(getters):
                     return fields[name].get_default()
                 return value
             except AttributeError:
-                return fields[name].get_default() if isinstance(fields[name], Field) else None
+                field = fields.get(name)
+                if field and isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
+                    return field[2]  # 返回默认实例
+                elif field and isinstance(field, Field):
+                    return field.get_default()
+                return None
 
         # 正常调用 getter
         if name in getters_map:
@@ -185,12 +194,25 @@ def _make_getattribute(getters):
         if name in fields:
             try:
                 value = object.__getattribute__(self, name)
+                # 修复：如果值是Field对象，说明未设置，返回默认值
                 if isinstance(value, Field):
                     return fields[name].get_default()
                 return value
             except AttributeError:
                 field = fields[name]
-                return field.get_default() if isinstance(field, Field) else None
+                if isinstance(field, tuple):
+                    field_type, field_class = field[0], field[1]
+                    if field_type == FIELD_OBJECT:
+                        # 类引用字段，自动实例化
+                        instance = field_class()
+                        # 将实例存储到对象字典中，避免下次访问时重新创建
+                        self.__dict__[name] = instance
+                        return instance
+                    elif field_type == FIELD_INSTANCE:
+                        return field[2]  # 返回默认实例
+                elif isinstance(field, Field):
+                    return field.get_default()
+                return None
 
         return object.__getattribute__(self, name)
     return __getattribute__
@@ -206,7 +228,8 @@ def _make_setattr(fields, validators):
             return
 
         field = fields[name]
-        validated_value = _validate_and_convert_value(self, field, name, value, validators)
+        # 为每次属性设置创建新的 visited 集合，防止递归验证
+        validated_value = _validate_and_convert_value(self, field, name, value, validators, visited=set())
         self.__dict__[name] = validated_value
     return __setattr__
 
@@ -221,68 +244,141 @@ def _make_init(cls, fields, validators, original_init):
             except TypeError:
                 pass
 
-        # === 新增：检查 required 字段是否传值 ===
+        # === 检查 required 字段是否传值 ===
         for key, field in fields.items():
+            if isinstance(field, tuple):
+                continue  # dataclass 字段不强制 required
             if isinstance(field, Field) and field.required:
                 if key not in kwargs:
                     raise ValidationError("Missing required field: '{}'".format(key))
 
         # === 初始化传入字段 ===
+        # 为整个初始化过程创建共享的 visited 集合
+        visited = set()
         for key, value in kwargs.items():
             if key not in fields:
                 self.__dict__[key] = value
                 continue
             field = fields[key]
-            validated_value = _validate_and_convert_value(self, field, key, value, validators)
+            validated_value = _validate_and_convert_value(self, field, key, value, validators, visited)
             self.__dict__[key] = validated_value
 
         # === 设置非 required 字段的默认值 ===
         for key, field in fields.items():
-            if (
-                key not in kwargs and
-                isinstance(field, Field) and
-                not field.required and
-                key not in self.__dict__
-            ):
+            if key in kwargs or key in self.__dict__:
+                continue
+                
+            if isinstance(field, tuple):
+                field_type = field[0]
+                if field_type == FIELD_OBJECT:
+                    # 字段定义为：demo = Test2Class，自动创建实例
+                    self.__dict__[key] = field[1]()  # 创建新实例
+                elif field_type == FIELD_INSTANCE:
+                    # 字段定义为：demo1 = Test2Class()
+                    self.__dict__[key] = field[2]  # 默认实例
+                    
+            elif isinstance(field, Field) and not field.required:
                 self.__dict__[key] = field.get_default()
 
         self.__dict__[INIT_FLAG] = False
     return __init__
 
 
-def _validate_and_convert_value(instance, field, field_name, value, validators):
+def _validate_and_convert_value(instance, field, field_name, value, validators, visited):
     """
-    统一校验入口：基础验证 -> 自定义验证
+    统一校验入口：基础验证 -> 自定义验证，添加递归防护
     """
-    # 1. 基础验证：Field 或嵌套 dataclass
-    if isinstance(field, type) and hasattr(field, DATACLASS_FIELDS) and isinstance(value, dict):
-        try:
-            validated_value = field(**value)
-        except ValidationError as e:
-            if field_name not in str(e):
-                e.path = [field_name] + getattr(e, "path", [])
-            raise
-    elif isinstance(field, Field):
-        try:
-            validated_value = field.validate(value)
-        except ValidationError as e:
-            if field_name not in str(e):
-                e.path = [field_name] + getattr(e, "path", [])
-            raise
-    else:
-        validated_value = value
-
-    # 2. 自定义验证（在基础验证之后）
-    if field_name in validators:
-        for validator in validators[field_name]:
+    # 递归防护：检查是否已处理过此对象
+    obj_id = id(value)
+    if obj_id in visited:
+        return value  # 已访问过，跳过进一步验证
+    visited.add(obj_id)
+    
+    try:
+        validated_value = None
+        
+        # 处理嵌套 dataclass 字段（类引用或实例）
+        if isinstance(field, tuple):
+            field_type = field[0]
+            field_class = field[1]
+            
+            if field_type == FIELD_OBJECT:
+                # 字段定义为：类属性
+                if isinstance(value, dict):
+                    # 创建实例并确保正确初始化所有字段
+                    validated_value = field_class(**value)
+                elif hasattr(value, DATACLASS_FIELDS):
+                    validated_value = value
+                else:
+                    raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
+                
+            elif field_type == FIELD_INSTANCE:
+                # 字段定义为：实例类属性
+                if isinstance(value, dict):
+                    validated_value = field_class(**value)
+                elif hasattr(value, DATACLASS_FIELDS):
+                    validated_value = value
+                else:
+                    raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
+                    
+            # 递归验证嵌套 dataclass 实例的字段
+            if hasattr(validated_value, DATACLASS_FIELDS):
+                for sub_field_name, sub_field_def in validated_value._dataclass_fields.items():
+                    # 检查 sub_field_def 是否是 tuple (嵌套 dataclass) 或 Field
+                    if isinstance(sub_field_def, tuple):
+                        sub_field_class = sub_field_def[1]
+                        sub_value = getattr(validated_value, sub_field_name, None)
+                        if sub_value is None and sub_field_def[0] == FIELD_INSTANCE:
+                            sub_value = sub_field_def[2]  # 使用默认实例
+                    elif isinstance(sub_field_def, Field):
+                        try:
+                            sub_value = getattr(validated_value, sub_field_name)
+                            # 修复：如果sub_value是Field对象，说明未设置，返回默认值
+                            if isinstance(sub_value, Field):
+                                sub_value = sub_field_def.get_default()
+                        except AttributeError:
+                            sub_value = sub_field_def.get_default()
+                    else:
+                        continue
+                        
+                    # 递归验证
+                    sub_validators = getattr(validated_value, '_dataclass_validators', {}).get(sub_field_name, [])
+                    _validate_and_convert_value(
+                        validated_value, 
+                        sub_field_def, 
+                        sub_field_name, 
+                        sub_value, 
+                        sub_validators, 
+                        visited
+                    )
+        
+        # 处理普通 Field
+        elif isinstance(field, Field):
             try:
-                validator(instance, validated_value)
+                validated_value = field.validate(value)
             except ValidationError as e:
                 if field_name not in str(e):
                     e.path = [field_name] + getattr(e, "path", [])
                 raise
+                
+        else:
+            validated_value = value
 
-    return validated_value
+        # 自定义验证
+        if field_name in validators:
+            for validator in validators[field_name]:
+                try:
+                    validator(instance, validated_value)
+                except ValidationError as e:
+                    if field_name not in str(e):
+                        e.path = [field_name] + getattr(e, "path", [])
+                    raise
+
+        return validated_value
+    
+    finally:
+        # 确保从 visited 集合中移除当前对象
+        visited.discard(obj_id)
 
 
 def _make_to_dict():
@@ -298,10 +394,13 @@ def _make_to_dict():
 
         # 补全字段默认值（如果未设置）
         for k, field in fields.items():
-            if k not in result and isinstance(field, Field):
-                default = field.get_default()
-                if default is not None:
-                    result[k] = default
+            if k not in result:
+                if isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
+                    result[k] = _serialize_value(field[2])  # 默认实例
+                elif isinstance(field, Field):
+                    default = field.get_default()
+                    if default is not None:
+                        result[k] = default
 
         return result
     return to_dict
