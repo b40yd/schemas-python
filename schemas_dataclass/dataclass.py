@@ -171,16 +171,14 @@ def dataclass(cls=None, **kwargs):
                 # 直接设置到__dict__，避免触发__setattr__
                 self.__dict__[key] = validated_value
 
-            # 设置未提供值的字段的默认值（但不包括有自定义getter的字段）
+            # 设置未提供值的字段的默认值
             for key, field in fields.items():
                 if key not in init_kwargs:
-                    # 如果有自定义getter方法，不设置默认值到__dict__
-                    if key in potential_getters:
-                        continue
+                    # # 如果有自定义getter方法，不设置默认值到__dict__
+                    # if key in potential_getters:
+                    #     continue
                     if isinstance(field, Field):
-                        default_value = field.get_default()
-                        if default_value is not None:
-                            self.__dict__[key] = default_value
+                        self.__dict__[key] = field.get_default()
                     # dataclass字段不设置默认值
 
             # 初始化完成，移除标志
