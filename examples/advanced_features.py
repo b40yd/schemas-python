@@ -3,7 +3,7 @@
 """
 高级功能示例
 
-演示 schemas_dataclass 的高级功能：
+演示 schema_dataclass 的高级功能：
 - 自定义验证装饰器
 - 自定义 getter 方法
 - 嵌套 dataclass
@@ -16,7 +16,7 @@ import os
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from schemas_dataclass import (
+from schema_dataclass import (
     StringField,
     NumberField,
     ListField,
@@ -444,7 +444,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 50)
     print("高级功能示例运行完成！")
-    print("\n这些示例展示了 schemas_dataclass 的强大功能：")
+    print("\n这些示例展示了 schema_dataclass 的强大功能：")
     print("- 自定义验证逻辑")
     print("- 自定义 getter 方法")
     print("- 嵌套 dataclass 结构")

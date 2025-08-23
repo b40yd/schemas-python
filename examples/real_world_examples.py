@@ -3,7 +3,7 @@
 """
 实际应用示例
 
-演示 schemas_dataclass 在真实业务场景中的应用：
+演示 schema_dataclass 在真实业务场景中的应用：
 - 用户管理系统
 - 电商产品管理
 - 博客系统
@@ -17,7 +17,7 @@ from datetime import datetime
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from schemas_dataclass import (
+from schema_dataclass import (
     StringField,
     NumberField,
     ListField,
@@ -552,7 +552,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
     print("实际应用示例运行完成！")
-    print("\n这些示例展示了 schemas_dataclass 在真实业务场景中的应用：")
+    print("\n这些示例展示了 schema_dataclass 在真实业务场景中的应用：")
     print("- 用户管理系统：完整的用户档案验证")
     print("- 电商产品管理：复杂的产品数据结构")
     print("- 博客系统：内容管理和验证")

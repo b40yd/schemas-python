@@ -5,7 +5,7 @@
 
 import pytest
 import sys
-from schemas_dataclass import StringField, NumberField, ListField, ValidationError
+from schema_dataclass import StringField, NumberField, ListField, ValidationError
 
 
 class TestDefaultErrorMessages:

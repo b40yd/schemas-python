@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "schemas-dataclass"
+name = "schema-dataclass"
 version = "0.0.1"
 description = "Python 2/3 兼容的 DataClass 库，支持完整的数据校验功能和自定义错误消息"
 readme = "README.md"
@@ -69,11 +69,11 @@ Changelog = "https://github.com/b40yd/schemas-python/blob/main/CHANGELOG.md"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["schemas_dataclass"]
+packages = ["schema_dataclass"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/schemas_dataclass",
+    "/schema_dataclass",
     "/tests",
     "/examples",
     "/docs",
@@ -92,7 +92,7 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "--disable-warnings",
-    "--cov=schemas_dataclass",
+    "--cov=schema_dataclass",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
@@ -114,7 +114,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["schemas_dataclass"]
+source = ["schema_dataclass"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

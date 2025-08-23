@@ -4,7 +4,7 @@
 """
 
 import pytest
-from schemas_dataclass import (
+from schema_dataclass import (
     StringField,
     NumberField,
     ListField,

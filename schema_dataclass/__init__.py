@@ -44,7 +44,7 @@ __all__ = [
 import sys
 
 if sys.version_info[0] < 2 or (sys.version_info[0] == 2 and sys.version_info[1] < 7):
-    raise ImportError("schemas_dataclass requires Python 2.7 or higher")
+    raise ImportError("schema_dataclass requires Python 2.7 or higher")
 
 
 # 显示版本信息
@@ -56,7 +56,7 @@ def get_version():
 def get_info():
     """获取包信息"""
     return {
-        "name": "schemas_dataclass",
+        "name": "schema_dataclass",
         "version": __version__,
         "author": __author__,
         "email": __email__,

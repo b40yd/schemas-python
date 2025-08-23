@@ -18,7 +18,7 @@ pip install schemas-dataclass
 ### 基础使用
 
 ```python
-from schemas_dataclass import StringField, NumberField, dataclass, ValidationError
+from schema_dataclass import StringField, NumberField, dataclass, ValidationError
 
 @dataclass
 class User(object):
@@ -93,7 +93,7 @@ pip install -r requirements-dev.txt
 ### 基础使用指南
 
 ```python
-from schemas_dataclass import StringField, NumberField, ListField, dataclass
+from schema_dataclass import StringField, NumberField, ListField, dataclass
 
 @dataclass
 class User(object):
@@ -236,7 +236,7 @@ python examples/real_world_examples.py
 #### 用户管理系统
 
 ```python
-from schemas_dataclass import StringField, NumberField, ListField, dataclass, validate
+from schema_dataclass import StringField, NumberField, ListField, dataclass, validate
 
 @dataclass
 class User(object):
@@ -410,7 +410,7 @@ pytest
 pytest tests/test_fields.py
 
 # 运行带覆盖率的测试
-pytest --cov=schemas_dataclass
+pytest --cov=schema_dataclass
 
 # 运行特定标记的测试
 pytest -m "unit"

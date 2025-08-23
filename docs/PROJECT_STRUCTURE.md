@@ -14,7 +14,7 @@ schemas-dataclass/
 ├── tox.ini                           # tox 配置
 ├── .gitignore                        # Git 忽略文件
 │
-├── 📦 schemas_dataclass/              # 主包目录
+├── 📦 schema_dataclass/              # 主包目录
 │   ├── __init__.py                   # 包初始化和公共API
 │   ├── fields.py                     # 字段类型定义和验证逻辑
 │   ├── dataclass.py                  # dataclass 装饰器实现
@@ -43,7 +43,7 @@ schemas-dataclass/
 
 ## 🔧 核心包结构
 
-### schemas_dataclass/__init__.py
+### schema_dataclass/__init__.py
 
 包的主要入口点，定义了公共 API：
 
@@ -67,7 +67,7 @@ __all__ = [
 ]
 ```
 
-### schemas_dataclass/fields.py
+### schema_dataclass/fields.py
 
 字段类型定义和验证逻辑：
 - `Field` 基类
@@ -77,7 +77,7 @@ __all__ = [
 - `ValidationError` 异常类
 - 自定义错误消息支持
 
-### schemas_dataclass/dataclass.py
+### schema_dataclass/dataclass.py
 
 DataClass 装饰器实现：
 - `@dataclass` 装饰器
@@ -119,7 +119,7 @@ pytest -m "error_messages"
 pytest tests/test_fields.py
 
 # 运行带覆盖率的测试
-pytest --cov=schemas_dataclass
+pytest --cov=schema_dataclass
 ```
 
 ## 📚 示例结构
@@ -240,7 +240,7 @@ pytest
 pytest tests/test_fields.py
 
 # 检查覆盖率
-pytest --cov=schemas_dataclass --cov-report=html
+pytest --cov=schema_dataclass --cov-report=html
 ```
 
 ### 4. 发布流程

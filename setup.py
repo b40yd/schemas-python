@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Setup script for schemas_dataclass package
+Setup script for schema_dataclass package
 """
 
 from setuptools import setup, find_packages
@@ -12,7 +12,7 @@ import sys
 def get_version():
     """从 __init__.py 中读取版本信息"""
     version_file = os.path.join(
-        os.path.dirname(__file__), "schemas_dataclass", "__init__.py"
+        os.path.dirname(__file__), "schema_dataclass", "__init__.py"
     )
     with open(version_file, "r") as f:
         for line in f:
@@ -44,7 +44,7 @@ def get_requirements():
 
 
 setup(
-    name="schemas_dataclass",
+    name="schema_dataclass",
     version=get_version(),
     author="b40yd",
     author_email="bb.qnyd@gmail.com",

@@ -3,7 +3,7 @@
 """
 基础使用示例
 
-演示 schemas_dataclass 的基本功能：
+演示 schema_dataclass 的基本功能：
 - 字段类型定义
 - 基础验证
 - dataclass 装饰器使用
@@ -15,7 +15,7 @@ import os
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from schemas_dataclass import (
+from schema_dataclass import (
     StringField,
     NumberField,
     ListField,
