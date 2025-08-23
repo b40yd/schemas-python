@@ -265,6 +265,7 @@ class TestCustomGetters:
         @dataclass
         class TestClass(object):
             value = StringField(default="default")
+            description = StringField()
 
             def get_value(self):
                 return "custom_getter_value"
@@ -275,4 +276,36 @@ class TestCustomGetters:
         assert obj.value == "custom_getter_value"
 
         # 但直接访问 __dict__ 应该显示实际存储的值
-        assert obj.__dict__.get("value") is None  # 没有设置实际值
+        assert obj.__dict__.get("value") is "default"
+        assert obj.__dict__.get("description") is None  # 没有设置实际值
+    
+    @pytest.mark.dataclass
+    def test_getter_self_reference(self):
+        """测试 getter 方法优先级"""
+
+        @dataclass
+        class TestClass(object):
+            value = StringField(default="default")
+            description = StringField()
+
+            def get_value(self):
+                return "custom_getter_value"
+            
+            def get_description(self):
+                if not self.description is None:
+                    return self.description
+                else:
+                    return "No description"
+
+        obj = TestClass()
+
+        # get_value 方法应该优先于默认值
+        assert obj.value == "custom_getter_value"
+        assert obj.description == "No description"  # get_description 返回 No description
+
+
+        # 但直接访问 __dict__ 应该显示实际存储的值
+        assert obj.__dict__.get("value") is "default"
+        assert obj.__dict__.get("description") is None  # 没有设置实际值
+
+        
