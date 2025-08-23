@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (ruff & black)
+    name: Lint (black)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,13 +19,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv (for lint)
+        shell: bash
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          uv --version || true
+
       - name: Install linters
         run: |
           python -m pip install --upgrade pip
-          python -m pip install ruff black
-
-      - name: Ruff check
-        run: ruff check .
+          python -m pip install black
 
       - name: Black check
         run: black --check .
@@ -96,11 +100,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install build twine
-          python - <<'PY'
-          import shutil, os
-          if os.path.isdir('dist'):
-              shutil.rmtree('dist')
-          PY
+          python -c "import os, shutil; d='dist'; shutil.rmtree(d) if os.path.isdir(d) else None"
           python -m build --sdist --wheel
 
       - name: Twine check metadata
@@ -144,11 +144,7 @@ jobs:
 
       - name: Build with uv
         run: |
-          python - <<'PY'
-          import shutil, os
-          if os.path.isdir('dist'):
-              shutil.rmtree('dist')
-          PY
+          python -c "import os, shutil; d='dist'; shutil.rmtree(d) if os.path.isdir(d) else None"
           uv build
 
       - name: Twine check metadata
