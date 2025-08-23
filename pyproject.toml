@@ -137,7 +137,7 @@ exclude_lines = [
 
 [tool.black]
 line-length = 88
-target-version = ['py36']
+target-version = ['py37']
 include = '\.pyi?$'
 extend-exclude = '''
 /(

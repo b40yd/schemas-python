@@ -108,32 +108,46 @@ jobs:
 
       - name: Install built wheel and smoke import
         run: |
-          # 跨平台查找 wheel 文件
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            # Windows
-            $wheel = Get-ChildItem -Path dist -Filter *.whl -Name -ErrorAction SilentlyContinue
-            if (-not $wheel) {
-              Write-Error "No wheel file found in dist directory"
-              exit 1
-            }
-            python -m pip install --force-reinstall "dist/$wheel"
-          else
-            # Linux/Mac
-            if [ ! -f dist/*.whl ]; then
-              echo "No wheel file found in dist directory"
-              exit 1
-            fi
-            python -m pip install --force-reinstall dist/*.whl
+          #!/bin/bash
+          # 查找 wheel 文件
+          if [ -z "$(ls dist/*.whl 2>/dev/null)" ]; then
+            echo "❌ No wheel file found in dist directory"
+            exit 1
           fi
-          
-          # 验证导入 (跨平台)
-          python -c "import importlib.util; \
-          spec = importlib.util.find_spec('schemas_dataclass'); \
-          print('import_ok=', bool(spec)); \
-          if spec: \
-              import schemas_dataclass as m; \
-              print('exports=', [a for a in dir(m) if a in ('Field', 'dataclass', 'fields')])"
 
+          WHEEL_FILE=$(ls dist/*.whl | head -1)
+          echo "📦 Found wheel: $WHEEL_FILE"
+
+          # 安装 wheel
+          python -m pip install --force-reinstall "$WHEEL_FILE"
+
+          # 验证导入
+          python -c "
+          import importlib.util
+          import sys
+
+          spec = importlib.util.find_spec('schemas_dataclass')
+          print(f'import_ok= {bool(spec)}')
+
+          if spec:
+              try:
+                  import schemas_dataclass as m
+                  exports = [a for a in dir(m) if a in ('Field', 'dataclass', 'fields')]
+                  print(f'exports= {exports}')
+                  
+                  # 验证关键导出项
+                  missing = [e for e in ['Field', 'dataclass', 'fields'] if e not in exports]
+                  if missing:
+                      print(f'❌ Missing expected exports: {missing}', file=sys.stderr)
+                      sys.exit(1)
+              except Exception as e:
+                  print(f'❌ Import failed: {str(e)}', file=sys.stderr)
+                  sys.exit(1)
+          else:
+              print('❌ Module not found', file=sys.stderr)
+              sys.exit(1)
+          "
+        shell: bash
 
   uv-build-test:
     name: uv build (Python ${{ matrix.python-version }} • ${{ matrix.os }})
@@ -173,30 +187,44 @@ jobs:
 
       - name: Install built wheel and smoke import
         run: |
-          # 跨平台查找 wheel 文件
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            # Windows
-            $wheel = Get-ChildItem -Path dist -Filter *.whl -Name -ErrorAction SilentlyContinue
-            if (-not $wheel) {
-              Write-Error "No wheel file found in dist directory"
-              exit 1
-            }
-            python -m pip install --force-reinstall "dist/$wheel"
-          else
-            # Linux/Mac
-            if [ ! -f dist/*.whl ]; then
-              echo "No wheel file found in dist directory"
-              exit 1
-            fi
-            python -m pip install --force-reinstall dist/*.whl
+          #!/bin/bash
+          # 查找 wheel 文件
+          if [ -z "$(ls dist/*.whl 2>/dev/null)" ]; then
+            echo "❌ No wheel file found in dist directory"
+            exit 1
           fi
-          
-          # 验证导入 (跨平台)
-          python -c "import importlib.util; \
-          spec = importlib.util.find_spec('schemas_dataclass'); \
-          print('import_ok=', bool(spec)); \
-          if spec: \
-              import schemas_dataclass as m; \
-              print('exports=', [a for a in dir(m) if a in ('Field', 'dataclass', 'fields')])"
 
+          WHEEL_FILE=$(ls dist/*.whl | head -1)
+          echo "📦 Found wheel: $WHEEL_FILE"
+
+          # 安装 wheel
+          python -m pip install --force-reinstall "$WHEEL_FILE"
+
+          # 验证导入
+          python -c "
+          import importlib.util
+          import sys
+
+          spec = importlib.util.find_spec('schemas_dataclass')
+          print(f'import_ok= {bool(spec)}')
+
+          if spec:
+              try:
+                  import schemas_dataclass as m
+                  exports = [a for a in dir(m) if a in ('Field', 'dataclass', 'fields')]
+                  print(f'exports= {exports}')
+                  
+                  # 验证关键导出项
+                  missing = [e for e in ['Field', 'dataclass', 'fields'] if e not in exports]
+                  if missing:
+                      print(f'❌ Missing expected exports: {missing}', file=sys.stderr)
+                      sys.exit(1)
+              except Exception as e:
+                  print(f'❌ Import failed: {str(e)}', file=sys.stderr)
+                  sys.exit(1)
+          else:
+              print('❌ Module not found', file=sys.stderr)
+              sys.exit(1)
+          "
+        shell: bash
 
