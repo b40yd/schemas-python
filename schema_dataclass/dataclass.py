@@ -238,11 +238,33 @@ def _make_init(cls, fields, validators, original_init):
     def __init__(self, **kwargs):
         self.__dict__[INIT_FLAG] = True
 
+        # 处理原始 __init__ 函数，使用反射获取参数列表
         if original_init and original_init not in (object.__init__, cls.__init__):
             try:
-                original_init(self)
-            except TypeError:
-                pass
+                # 使用 inspect 获取原始 __init__ 的参数列表
+                if sys.version_info[0] < 3:
+                    # Python 2
+                    argspec = inspect.getargspec(original_init)
+                    init_params = argspec.args[1:]  # 跳过 'self' 参数
+                else:
+                    # Python 3
+                    signature = inspect.signature(original_init)
+                    init_params = [
+                        param.name for param in signature.parameters.values() 
+                        if param.name != 'self' and param.default == inspect.Parameter.empty
+                    ]
+                
+                # 提取原始 __init__ 需要的参数
+                init_kwargs = {}
+                for param in init_params:
+                    if param in kwargs:
+                        init_kwargs[param] = kwargs.pop(param)
+                
+                # 调用原始 __init__ 函数
+                original_init(self, **init_kwargs)
+            except Exception as e:
+                # 如果反射失败，保留原始行为但提供更好的错误信息
+                raise TypeError("Error calling original __init__: {}".format(str(e)))
 
         # === 检查 required 字段是否传值 ===
         for key, field in fields.items():
@@ -271,10 +293,10 @@ def _make_init(cls, fields, validators, original_init):
             if isinstance(field, tuple):
                 field_type = field[0]
                 if field_type == FIELD_OBJECT:
-                    # 字段定义为：demo = Test2Class，自动创建实例
+                    # 字段定义为：类
                     self.__dict__[key] = field[1]()  # 创建新实例
                 elif field_type == FIELD_INSTANCE:
-                    # 字段定义为：demo1 = Test2Class()
+                    # 字段定义为：实例类
                     self.__dict__[key] = field[2]  # 默认实例
                     
             elif isinstance(field, Field) and not field.required:
