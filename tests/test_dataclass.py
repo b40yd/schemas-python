@@ -449,5 +449,41 @@ class TestCustomGetters:
 
         obj.demo.value = "newdemo"
         assert obj.demo.value == "newdemo"
+
+    @pytest.mark.dataclass
+    def test_dataclass_eq_and_ne(self):
+        @dataclass
+        class User(object):
+            name = StringField()
+            age = NumberField()
+
+        user1 = User()
+        user2 = User()
+        # 测试1:相等
+        assert user1 == user2
+
+        # 测试2:不相等
+        user1.name = "Alice"
+        assert user1 != user2
+
+        # 测试3:测试相等
+        user2.name = "Alice"
+        assert user1 == user2
+
+        user1.age = 25
+        assert user1 != user2
+        user2.age = 25
+        assert user1 == user2
+
+        # 测试初始值相等
+        user3 = User(name="Bob", age=30)
+        user4 = User(name="Bob", age=30)
+        assert user3 == user4
+
+        # 测试初始值不相等
+        user5 = User(name="Bob", age=30)
+        user6 = User(name="Bob", age=31)
+        assert user5 != user6
+
         
 
