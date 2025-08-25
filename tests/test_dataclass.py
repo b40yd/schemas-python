@@ -484,6 +484,3 @@ class TestCustomGetters:
         user5 = User(name="Bob", age=30)
         user6 = User(name="Bob", age=31)
         assert user5 != user6
-
-        
-
