@@ -216,7 +216,7 @@ pytest 测试配置：
 ### 1. 环境设置
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 pip install -e .
 pip install -r requirements-dev.txt

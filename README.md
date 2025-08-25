@@ -28,7 +28,7 @@ pip install schemas-dataclass
 ### From Source
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 python setup.py install
 ```
@@ -36,7 +36,7 @@ python setup.py install
 ### For Development
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 pip install -e .
 pip install -r requirements-dev.txt
@@ -544,7 +544,7 @@ Contributions are welcome! Please follow these steps:
 ### Development Environment Setup
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 pip install -e .
 pip install -r requirements-dev.txt

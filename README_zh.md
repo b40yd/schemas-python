@@ -76,7 +76,7 @@ pip install schemas-dataclass
 #### 从源码安装
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 python setup.py install
 ```
@@ -84,7 +84,7 @@ python setup.py install
 #### 开发环境安装
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 pip install -e .
 pip install -r requirements-dev.txt
@@ -520,7 +520,7 @@ tests/
 ### 开发环境设置
 
 ```bash
-git clone https://github.com/schemas/dataclass.git
+git clone https://github.com/b40yd/schema_dataclass.git
 cd dataclass
 pip install -e .
 pip install -r requirements-dev.txt
