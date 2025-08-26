@@ -20,7 +20,7 @@ __email__ = "bb.qnyd@gmail.com"
 # 导入核心组件
 from .fields import Field, StringField, NumberField, ListField, ValidationError
 
-from .dataclass import dataclass, validate
+from .dataclass import dataclass, validate, getter, setter
 
 # 定义公共 API
 __all__ = [

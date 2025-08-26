@@ -11,6 +11,8 @@ from schema_dataclass import (
     ValidationError,
     dataclass,
     validate,
+    getter,
+    setter
 )
 
 
@@ -242,7 +244,8 @@ class TestCustomGetters:
         class BlogPost(object):
             title = StringField()
             status = StringField(default="draft")
-
+            
+            @getter("title")
             def get_title(self):
                 """自定义获取标题的方法"""
                 title = self.__dict__.get("title", "")
@@ -266,7 +269,8 @@ class TestCustomGetters:
         class TestClass(object):
             value = StringField(default="default")
             description = StringField()
-
+            
+            @getter("value")
             def get_value(self):
                 return "custom_getter_value"
 
@@ -288,9 +292,11 @@ class TestCustomGetters:
             value = StringField(default="default")
             description = StringField()
 
+            @getter("value")
             def get_value(self):
                 return "custom_getter_value"
 
+            @getter("description")
             def get_description(self):
                 if not self.description is None:
                     return self.description

@@ -1,17 +1,38 @@
 # -*- coding: utf-8 -*-
-import sys
 import inspect
 from .fields import Field, ValidationError
 
 DATACLASS_FIELDS = "_dataclass_fields"
-DATACLASS_GETTERS = "_dataclass_getters"
+DATACLASS_ACCESSORS = "_dataclass_accessors"
 
 INIT_FLAG = "_initializing"
 IN_GETTER = "_in_getter"
-CUSTOM_GET_VALUE_FUNCTION_NAME_PREFIX = "get_"
 
 FIELD_OBJECT = '_object'
 FIELD_INSTANCE = '_instance'
+
+
+def getter(field_name):
+    """
+    装饰器：为字段注册自定义 getter 方法
+    """
+    def decorator(func):
+        func._is_dataclass_getter = True
+        func._dataclass_field_name = field_name
+        return func
+    return decorator
+
+
+def setter(field_name):
+    """
+    装饰器：为字段注册自定义 setter 方法
+    """
+    def decorator(func):
+        func._is_dataclass_setter = True
+        func._dataclass_field_name = field_name
+        return func
+    return decorator
+
 
 def validate(field_name):
     """
@@ -29,30 +50,24 @@ def dataclass(cls=None, **kwargs):
     """
 
     def wrap(cls):
-        # 收集字段、getter、验证器
         fields = _collect_fields(cls)
-        getters = _collect_getters(cls, fields)
+        accessors = _collect_accessors(cls)
         validators = _collect_validators(cls)
 
-        # 注入元数据
         cls._dataclass_fields = fields
-        cls._dataclass_getters = getters
+        cls._dataclass_accessors = accessors
         cls._dataclass_validators = validators
 
-        # 生成 __init__
         original_init = getattr(cls, "__init__", None)
         cls.__init__ = _make_init(cls, fields, validators, original_init)
 
-        # 添加属性访问支持
         cls.__getitem__ = lambda self, key: self._get_field_value(key)
         cls.__setitem__ = lambda self, key, value: setattr(self, key, value)
         cls.__contains__ = lambda self, key: key in getattr(self, DATACLASS_FIELDS, {})
 
-        # 重写 __getattribute__ 以支持 get_xxx 方法
-        cls.__getattribute__ = _make_getattribute(getters)
-        cls.__setattr__ = _make_setattr(fields, validators)
+        cls.__getattribute__ = _make_getattribute(accessors)
+        cls.__setattr__ = _make_setattr(fields, validators, accessors)
 
-        # 实用方法
         cls._get_field_value = _make_get_field_value()
         cls.to_dict = _make_to_dict()
         cls.keys = lambda self: iter(getattr(self, DATACLASS_FIELDS, {}).keys())
@@ -60,7 +75,6 @@ def dataclass(cls=None, **kwargs):
         cls.items = lambda self: [(k, getattr(self, k)) for k in self.keys()]
         cls.get = lambda self, key, default=None: getattr(self, key, default)
 
-        # 可选方法
         if kwargs.get("repr", True):
             cls.__repr__ = lambda self: "%s(%s)" % (
                 type(self).__name__,
@@ -79,20 +93,16 @@ def dataclass(cls=None, **kwargs):
     return wrap if cls is None else wrap(cls)
 
 
-# ================== 收集逻辑 ==================
 def _collect_fields(cls):
     """收集所有 Field 字段"""
     fields = {}
     all_attrs = {}
-
-    # 从 MRO 中收集所有属性（保留最具体的）
     for base in reversed(cls.__mro__):
         if base is object:
             continue
         for k, v in base.__dict__.items():
             if k not in all_attrs:
                 all_attrs[k] = v
-
     for key, val in all_attrs.items():
         if isinstance(val, Field):
             val.name = key
@@ -104,23 +114,23 @@ def _collect_fields(cls):
     return fields
 
 
-def _collect_getters(cls, fields):
-    """收集 get_xxx 格式的 getter 方法"""
-    getters = {}
+def _collect_accessors(cls):
+    """收集被 @getter 和 @setter 装饰的方法"""
+    accessors = {}
     for key, val in cls.__dict__.items():
-        if not (callable(val) and key.startswith(CUSTOM_GET_VALUE_FUNCTION_NAME_PREFIX)):
+        if not callable(val):
             continue
-        field_name = key[4:]
-        if field_name not in fields:
-            continue
-        try:
-            args = inspect.getargspec(val).args if sys.version_info[0] < 3 \
-                else list(inspect.signature(val).parameters.keys())
-            if len(args) == 1 and args[0] == "self":
-                getters[field_name] = val
-        except (TypeError, ValueError):
-            pass  # 无法分析签名，跳过
-    return getters
+        if hasattr(val, '_is_dataclass_getter'):
+            field_name = val._dataclass_field_name
+            if field_name not in accessors:
+                accessors[field_name] = {}
+            accessors[field_name]['getter'] = val
+        if hasattr(val, '_is_dataclass_setter'):
+            field_name = val._dataclass_field_name
+            if field_name not in accessors:
+                accessors[field_name] = {}
+            accessors[field_name]['setter'] = val
+    return accessors
 
 
 def _collect_validators(cls):
@@ -142,7 +152,7 @@ def _make_get_field_value():
             if key in fields:
                 field = fields[key]
                 if isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
-                    return field[2]  # 返回默认实例
+                    return field[2]
                 elif isinstance(field, Field):
                     return field.get_default()
                 return None
@@ -151,23 +161,21 @@ def _make_get_field_value():
             raise KeyError("Field '{}' not found".format(key))
     return _get_field_value
 
-def _make_getattribute(getters):
+
+def _make_getattribute(accessors):
     def __getattribute__(self, name):
-        # 安全获取元数据
         try:
             fields = object.__getattribute__(self, DATACLASS_FIELDS)
-            getters_map = object.__getattribute__(self, DATACLASS_GETTERS)
+            accessors_map = object.__getattribute__(self, DATACLASS_ACCESSORS)
         except AttributeError:
             return object.__getattribute__(self, name)
 
-        # 检查是否在 getter 调用中（防止递归）
         try:
             in_getter = object.__getattribute__(self, IN_GETTER)
         except AttributeError:
             in_getter = False
 
-        # 如果正在执行 getter，跳过 getter 逻辑，直接取值
-        if in_getter and name in getters_map:
+        if in_getter and name in accessors_map and 'getter' in accessors_map[name]:
             try:
                 value = object.__getattribute__(self, name)
                 if isinstance(value, Field) and name in fields:
@@ -176,25 +184,22 @@ def _make_getattribute(getters):
             except AttributeError:
                 field = fields.get(name)
                 if field and isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
-                    return field[2]  # 返回默认实例
+                    return field[2]
                 elif field and isinstance(field, Field):
                     return field.get_default()
                 return None
 
-        # 正常调用 getter
-        if name in getters_map:
-            getter = getters_map[name]
+        if name in accessors_map and 'getter' in accessors_map[name]:
+            getter_func = accessors_map[name]['getter']
             object.__setattr__(self, IN_GETTER, True)
             try:
-                return getter(self)
+                return getter_func(self)
             finally:
                 object.__setattr__(self, IN_GETTER, False)
 
-        # 处理字段（未设置时返回默认值）
         if name in fields:
             try:
                 value = object.__getattribute__(self, name)
-                # 修复：如果值是Field对象，说明未设置，返回默认值
                 if isinstance(value, Field):
                     return fields[name].get_default()
                 return value
@@ -203,13 +208,11 @@ def _make_getattribute(getters):
                 if isinstance(field, tuple):
                     field_type, field_class = field[0], field[1]
                     if field_type == FIELD_OBJECT:
-                        # 类引用字段，自动实例化
                         instance = field_class()
-                        # 将实例存储到对象字典中，避免下次访问时重新创建
                         self.__dict__[name] = instance
                         return instance
                     elif field_type == FIELD_INSTANCE:
-                        return field[2]  # 返回默认实例
+                        return field[2]
                 elif isinstance(field, Field):
                     return field.get_default()
                 return None
@@ -217,18 +220,27 @@ def _make_getattribute(getters):
         return object.__getattribute__(self, name)
     return __getattribute__
 
-def _make_setattr(fields, validators):
+
+def _make_setattr(fields, validators, accessors):
     def __setattr__(self, name, value):
         if getattr(self, INIT_FLAG, False):
             self.__dict__[name] = value
             return
+
+        if name in accessors and 'setter' in accessors[name]:
+            setter_func = accessors[name]['setter']
+            object.__setattr__(self, IN_GETTER, True)
+            try:
+                setter_func(self, value)
+                return
+            finally:
+                object.__setattr__(self, IN_GETTER, False)
 
         if name not in fields:
             self.__dict__[name] = value
             return
 
         field = fields[name]
-        # 为每次属性设置创建新的 visited 集合，防止递归验证
         validated_value = _validate_and_convert_value(self, field, name, value, validators, visited=set())
         self.__dict__[name] = validated_value
     return __setattr__
@@ -238,44 +250,25 @@ def _make_init(cls, fields, validators, original_init):
     def __init__(self, **kwargs):
         self.__dict__[INIT_FLAG] = True
 
-        # 处理原始 __init__ 函数，使用反射获取参数列表
         if original_init and original_init not in (object.__init__, cls.__init__):
             try:
-                # 使用 inspect 获取原始 __init__ 的参数列表
-                if sys.version_info[0] < 3:
-                    # Python 2
-                    argspec = inspect.getargspec(original_init)
-                    init_params = argspec.args[1:]  # 跳过 'self' 参数
-                else:
-                    # Python 3
-                    signature = inspect.signature(original_init)
-                    init_params = [
-                        param.name for param in signature.parameters.values() 
-                        if param.name != 'self' and param.default == inspect.Parameter.empty
-                    ]
-                
-                # 提取原始 __init__ 需要的参数
+                argspec = inspect.getargspec(original_init)
+                init_params = argspec.args[1:]
                 init_kwargs = {}
                 for param in init_params:
                     if param in kwargs:
                         init_kwargs[param] = kwargs.pop(param)
-                
-                # 调用原始 __init__ 函数
                 original_init(self, **init_kwargs)
             except Exception as e:
-                # 如果反射失败，保留原始行为但提供更好的错误信息
                 raise TypeError("Error calling original __init__: {}".format(str(e)))
 
-        # === 检查 required 字段是否传值 ===
         for key, field in fields.items():
             if isinstance(field, tuple):
-                continue  # dataclass 字段不强制 required
+                continue
             if isinstance(field, Field) and field.required:
                 if key not in kwargs:
                     raise ValidationError("Missing required field: '{}'".format(key))
 
-        # === 初始化传入字段 ===
-        # 为整个初始化过程创建共享的 visited 集合
         visited = set()
         for key, value in kwargs.items():
             if key not in fields:
@@ -285,20 +278,15 @@ def _make_init(cls, fields, validators, original_init):
             validated_value = _validate_and_convert_value(self, field, key, value, validators, visited)
             self.__dict__[key] = validated_value
 
-        # === 设置非 required 字段的默认值 ===
         for key, field in fields.items():
             if key in kwargs or key in self.__dict__:
                 continue
-                
             if isinstance(field, tuple):
                 field_type = field[0]
                 if field_type == FIELD_OBJECT:
-                    # 字段定义为：类
-                    self.__dict__[key] = field[1]()  # 创建新实例
+                    self.__dict__[key] = field[1]()
                 elif field_type == FIELD_INSTANCE:
-                    # 字段定义为：实例类
-                    self.__dict__[key] = field[2]  # 默认实例
-                    
+                    self.__dict__[key] = field[2]
             elif isinstance(field, Field) and not field.required:
                 self.__dict__[key] = field.get_default()
 
@@ -307,27 +295,20 @@ def _make_init(cls, fields, validators, original_init):
 
 
 def _validate_and_convert_value(instance, field, field_name, value, validators, visited):
-    """
-    统一校验入口：基础验证 -> 自定义验证，添加递归防护
-    """
-    # 递归防护：检查是否已处理过此对象
     obj_id = id(value)
     if obj_id in visited:
-        return value  # 已访问过，跳过进一步验证
+        return value
     visited.add(obj_id)
     
     try:
         validated_value = None
         
-        # 处理嵌套 dataclass 字段（类引用或实例）
         if isinstance(field, tuple):
             field_type = field[0]
             field_class = field[1]
             
             if field_type == FIELD_OBJECT:
-                # 字段定义为：类属性
                 if isinstance(value, dict):
-                    # 创建实例并确保正确初始化所有字段
                     validated_value = field_class(**value)
                 elif hasattr(value, DATACLASS_FIELDS):
                     validated_value = value
@@ -335,7 +316,6 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                     raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
                 
             elif field_type == FIELD_INSTANCE:
-                # 字段定义为：实例类属性
                 if isinstance(value, dict):
                     validated_value = field_class(**value)
                 elif hasattr(value, DATACLASS_FIELDS):
@@ -343,19 +323,16 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                 else:
                     raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
                     
-            # 递归验证嵌套 dataclass 实例的字段
             if hasattr(validated_value, DATACLASS_FIELDS):
                 for sub_field_name, sub_field_def in validated_value._dataclass_fields.items():
-                    # 检查 sub_field_def 是否是 tuple (嵌套 dataclass) 或 Field
                     if isinstance(sub_field_def, tuple):
                         sub_field_class = sub_field_def[1]
                         sub_value = getattr(validated_value, sub_field_name, None)
                         if sub_value is None and sub_field_def[0] == FIELD_INSTANCE:
-                            sub_value = sub_field_def[2]  # 使用默认实例
+                            sub_value = sub_field_def[2]
                     elif isinstance(sub_field_def, Field):
                         try:
                             sub_value = getattr(validated_value, sub_field_name)
-                            # 修复：如果sub_value是Field对象，说明未设置，返回默认值
                             if isinstance(sub_value, Field):
                                 sub_value = sub_field_def.get_default()
                         except AttributeError:
@@ -363,7 +340,6 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                     else:
                         continue
                         
-                    # 递归验证
                     sub_validators = getattr(validated_value, '_dataclass_validators', {}).get(sub_field_name, [])
                     _validate_and_convert_value(
                         validated_value, 
@@ -374,7 +350,6 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                         visited
                     )
         
-        # 处理普通 Field
         elif isinstance(field, Field):
             try:
                 validated_value = field.validate(value)
@@ -382,11 +357,9 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                 if field_name not in str(e):
                     e.path = [field_name] + getattr(e, "path", [])
                 raise
-                
         else:
             validated_value = value
 
-        # 自定义验证
         if field_name in validators:
             for validator in validators[field_name]:
                 try:
@@ -397,9 +370,7 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                     raise
 
         return validated_value
-    
     finally:
-        # 确保从 visited 集合中移除当前对象
         visited.discard(obj_id)
 
 
@@ -408,17 +379,15 @@ def _make_to_dict():
         result = {}
         fields = getattr(self, DATACLASS_FIELDS, {})
 
-        # 序列化实例属性（非私有）
         for k, v in self.__dict__.items():
             if k.startswith("_"):
                 continue
             result[k] = _serialize_value(v)
 
-        # 补全字段默认值（如果未设置）
         for k, field in fields.items():
             if k not in result:
                 if isinstance(field, tuple) and field[0] == FIELD_INSTANCE:
-                    result[k] = _serialize_value(field[2])  # 默认实例
+                    result[k] = _serialize_value(field[2])
                 elif isinstance(field, Field):
                     default = field.get_default()
                     if default is not None:
@@ -429,7 +398,6 @@ def _make_to_dict():
 
 
 def _serialize_value(value):
-    """递归序列化值"""
     if hasattr(value, "to_dict") and callable(getattr(value, "to_dict")):
         return value.to_dict()
     elif isinstance(value, list):
