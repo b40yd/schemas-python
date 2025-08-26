@@ -6,39 +6,20 @@ Schemas DataClass - Python 2 兼容的 DataClass 库
 装饰器语法和自定义错误消息。
 
 主要特性:
-- 完整的字段类型支持 (StringField, NumberField, ListField)
+- 自定义字段类型支持
 - 自定义错误消息和多语言支持
 - Python 2/3 兼容性
 - 装饰器语法支持
-- 自定义验证和 getter 方法
+- 自定义验证和 getter setter方法
 """
 
 __version__ = "0.0.3"
-__author__ = "Schemas DataClass Team"
+__author__ = "b40yd"
 __email__ = "bb.qnyd@gmail.com"
 
 # 导入核心组件
-from .fields import Field, StringField, NumberField, ListField, ValidationError
-
-from .dataclass import dataclass, validate, getter, setter
-
-# 定义公共 API
-__all__ = [
-    # 字段类型
-    "Field",
-    "StringField",
-    "NumberField",
-    "ListField",
-    # 装饰器
-    "dataclass",
-    "validate",
-    # 异常
-    "ValidationError",
-    # 版本信息
-    "__version__",
-    "__author__",
-    "__email__",
-]
+from .fields import *
+from .dataclass import *
 
 # 版本兼容性检查
 import sys
