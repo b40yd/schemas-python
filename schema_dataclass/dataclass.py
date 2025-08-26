@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
+import sys
 import inspect
 from .fields import Field, ValidationError
 
+# 元数据字段名
 DATACLASS_FIELDS = "_dataclass_fields"
 DATACLASS_ACCESSORS = "_dataclass_accessors"
 
-INIT_FLAG = "_initializing"
+# 内部状态标志
+INIT_FLAG = "_initializing"       # 用于控制 __init__ 递归（保留）
 IN_GETTER = "_in_getter"
+IN_SETTER = "_in_setter"          # 防止 setter 递归
 
+# 字段类型标识
 FIELD_OBJECT = '_object'
 FIELD_INSTANCE = '_instance'
 
@@ -222,19 +227,37 @@ def _make_getattribute(accessors):
 
 
 def _make_setattr(fields, validators, accessors):
+    """
+    修改：移除 INIT_FLAG 短路逻辑，确保初始化时也走 setter
+    """
     def __setattr__(self, name, value):
-        if getattr(self, INIT_FLAG, False):
-            self.__dict__[name] = value
-            return
+        # 移除：if getattr(self, INIT_FLAG, False): ... 的短路
+        # 初始化时也要完整处理
 
-        if name in accessors and 'setter' in accessors[name]:
+        try:
+            in_setter = object.__getattribute__(self, IN_SETTER)
+        except AttributeError:
+            in_setter = False
+
+        if name in accessors and 'setter' in accessors[name] and not in_setter:
             setter_func = accessors[name]['setter']
-            object.__setattr__(self, IN_GETTER, True)
+            object.__setattr__(self, IN_SETTER, True)
             try:
-                setter_func(self, value)
+                # 先验证和转换值，然后传递给 setter
+                field = fields.get(name)
+                if field and isinstance(field, Field):
+                    validated_value = _validate_and_convert_value(self, field, name, value, validators, visited=set())
+                    # 在调用 setter 之前，先设置值到 __dict__ 中，这样 setter 可以访问当前值
+                    current_value = self.__dict__.get(name)
+                    self.__dict__[name] = validated_value
+                    setter_func(self, validated_value)
+                else:
+                    current_value = self.__dict__.get(name)
+                    self.__dict__[name] = value
+                    setter_func(self, value)
                 return
             finally:
-                object.__setattr__(self, IN_GETTER, False)
+                object.__setattr__(self, IN_SETTER, False)
 
         if name not in fields:
             self.__dict__[name] = value
@@ -248,6 +271,7 @@ def _make_setattr(fields, validators, accessors):
 
 def _make_init(cls, fields, validators, original_init):
     def __init__(self, **kwargs):
+        # 保留 INIT_FLAG 用于控制原始 __init__ 递归调用
         self.__dict__[INIT_FLAG] = True
 
         if original_init and original_init not in (object.__init__, cls.__init__):
@@ -262,35 +286,40 @@ def _make_init(cls, fields, validators, original_init):
             except Exception as e:
                 raise TypeError("Error calling original __init__: {}".format(str(e)))
 
+        # 检查 required 字段
         for key, field in fields.items():
-            if isinstance(field, tuple):
-                continue
             if isinstance(field, Field) and field.required:
                 if key not in kwargs:
                     raise ValidationError("Missing required field: '{}'".format(key))
 
         visited = set()
+        # 使用 setattr 触发 __setattr__ → 走 setter
         for key, value in kwargs.items():
             if key not in fields:
                 self.__dict__[key] = value
                 continue
             field = fields[key]
             validated_value = _validate_and_convert_value(self, field, key, value, validators, visited)
-            self.__dict__[key] = validated_value
+            setattr(self, key, validated_value)  # ← 触发 __setattr__，走 setter
 
+        # 设置非 required 字段的默认值（也走 setter）
         for key, field in fields.items():
             if key in kwargs or key in self.__dict__:
                 continue
             if isinstance(field, tuple):
                 field_type = field[0]
                 if field_type == FIELD_OBJECT:
-                    self.__dict__[key] = field[1]()
+                    setattr(self, key, field[1]())
                 elif field_type == FIELD_INSTANCE:
-                    self.__dict__[key] = field[2]
+                    setattr(self, key, field[2])
             elif isinstance(field, Field) and not field.required:
-                self.__dict__[key] = field.get_default()
+                default = field.get_default()
+                if default is not None:
+                    setattr(self, key, default)
 
+        # 最后才清除 INIT_FLAG
         self.__dict__[INIT_FLAG] = False
+
     return __init__
 
 
@@ -299,57 +328,44 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
     if obj_id in visited:
         return value
     visited.add(obj_id)
-    
+
     try:
         validated_value = None
-        
+
         if isinstance(field, tuple):
             field_type = field[0]
             field_class = field[1]
-            
+
             if field_type == FIELD_OBJECT:
                 if isinstance(value, dict):
                     validated_value = field_class(**value)
                 elif hasattr(value, DATACLASS_FIELDS):
                     validated_value = value
                 else:
-                    raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
-                
+                    raise ValidationError("Expected dict or {} instance for field '{}'".format(
+                        field_class.__name__, field_name))
             elif field_type == FIELD_INSTANCE:
                 if isinstance(value, dict):
                     validated_value = field_class(**value)
                 elif hasattr(value, DATACLASS_FIELDS):
                     validated_value = value
                 else:
-                    raise ValidationError("Expected dict or {} instance for field '{}'".format(field_class.__name__, field_name))
-                    
+                    raise ValidationError("Expected dict or {} instance for field '{}'".format(
+                        field_class.__name__, field_name))
+
             if hasattr(validated_value, DATACLASS_FIELDS):
-                for sub_field_name, sub_field_def in validated_value._dataclass_fields.items():
-                    if isinstance(sub_field_def, tuple):
-                        sub_field_class = sub_field_def[1]
-                        sub_value = getattr(validated_value, sub_field_name, None)
-                        if sub_value is None and sub_field_def[0] == FIELD_INSTANCE:
-                            sub_value = sub_field_def[2]
-                    elif isinstance(sub_field_def, Field):
-                        try:
-                            sub_value = getattr(validated_value, sub_field_name)
-                            if isinstance(sub_value, Field):
-                                sub_value = sub_field_def.get_default()
-                        except AttributeError:
-                            sub_value = sub_field_def.get_default()
-                    else:
-                        continue
-                        
-                    sub_validators = getattr(validated_value, '_dataclass_validators', {}).get(sub_field_name, [])
+                for sub_name, sub_field in validated_value._dataclass_fields.items():
+                    try:
+                        sub_value = getattr(validated_value, sub_name)
+                        if isinstance(sub_value, Field):
+                            sub_value = sub_field.get_default()
+                    except AttributeError:
+                        sub_value = sub_field.get_default() if isinstance(sub_field, Field) else None
+
+                    sub_validators = getattr(validated_value, '_dataclass_validators', {}).get(sub_name, [])
                     _validate_and_convert_value(
-                        validated_value, 
-                        sub_field_def, 
-                        sub_field_name, 
-                        sub_value, 
-                        sub_validators, 
-                        visited
+                        validated_value, sub_field, sub_name, sub_value, sub_validators, visited
                     )
-        
         elif isinstance(field, Field):
             try:
                 validated_value = field.validate(value)
@@ -370,6 +386,7 @@ def _validate_and_convert_value(instance, field, field_name, value, validators, 
                     raise
 
         return validated_value
+
     finally:
         visited.discard(obj_id)
 

@@ -490,3 +490,40 @@ class TestCustomGetters:
         user5 = User(name="Bob", age=30)
         user6 = User(name="Bob", age=31)
         assert user5 != user6
+
+    @pytest.mark.dataclass
+    def test_dataclass_setter(self):
+        @dataclass
+        class Demo(object):
+            name = StringField(min_length=2, max_length=10)
+
+            @setter("name")
+            def set_name(self, value):
+                if not self.name.isalpha():
+                    raise ValidationError("name cannot include number.")
+                print("value", value.upper(), self.name)
+                self.name = value.upper()
+
+        demo = Demo(name="hello")
+        assert demo.name == "HELLO"
+
+        demo.name = "world"
+        assert demo.name == "WORLD"
+
+        try:
+            demo.name = "a"*11
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        try:
+            demo.name = "hello,world"
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
+
+        try:
+            demo.name = "helloworld123"
+            assert False, "Should raise ValidationError"
+        except ValidationError:
+            pass
