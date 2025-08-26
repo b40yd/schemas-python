@@ -13,7 +13,7 @@ Schemas DataClass - Python 2 兼容的 DataClass 库
 - 自定义验证和 getter 方法
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __author__ = "Schemas DataClass Team"
 __email__ = "bb.qnyd@gmail.com"
 

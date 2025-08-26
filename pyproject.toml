@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "schema-dataclass"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python 2/3 兼容的 DataClass 库，支持完整的数据校验功能和自定义错误消息"
 readme = "README.md"
 license = "GPL-3.0-or-later"
