@@ -2,7 +2,10 @@
 import abc
 import re
 import sys
-from .exceptions import ValidationError
+import datetime
+import os
+import time
+from schema_dataclass.exceptions import ValidationError
 
 # Python 2/3 兼容性
 if sys.version_info[0] >= 3:
@@ -122,6 +125,56 @@ class ListItemsValidationStrategy(ValidationStrategy):
         return results
 
 
+class DateValidationStrategy(ValidationStrategy):
+    """日期范围验证策略"""
+    def validate(self, value, field):
+        if value is None:
+            return value
+            
+        # 检查最小日期
+        if field.min_date is not None and value < field.min_date:
+            error_msg = field.get_error_message(
+                "min_date", 
+                min_date=field.min_date.strftime(field.output_format or "%Y-%m-%d")
+            )
+            raise ValidationError(error_msg)
+            
+        # 检查最大日期
+        if field.max_date is not None and value > field.max_date:
+            error_msg = field.get_error_message(
+                "max_date", 
+                max_date=field.max_date.strftime(field.output_format or "%Y-%m-%d")
+            )
+            raise ValidationError(error_msg)
+            
+        return value
+
+
+class DateTimeValidationStrategy(ValidationStrategy):
+    """日期时间范围验证策略"""
+    def validate(self, value, field):
+        if value is None:
+            return value
+            
+        # 检查最小日期时间
+        if field.min_datetime is not None and value < field.min_datetime:
+            error_msg = field.get_error_message(
+                "min_datetime", 
+                min_datetime=field.min_datetime.strftime(field.output_format or "%Y-%m-%d %H:%M:%S")
+            )
+            raise ValidationError(error_msg)
+            
+        # 检查最大日期时间
+        if field.max_datetime is not None and value > field.max_datetime:
+            error_msg = field.get_error_message(
+                "max_datetime", 
+                max_datetime=field.max_datetime.strftime(field.output_format or "%Y-%m-%d %H:%M:%S")
+            )
+            raise ValidationError(error_msg)
+            
+        return value
+
+
 class Field(object):
     """字段基类，使用策略模式实现验证逻辑"""
     __metaclass__ = abc.ABCMeta
@@ -187,6 +240,13 @@ class Field(object):
             "regex": "Value does not match pattern: {regex}",
             "invalid_type": "Value must be a {expected_type}",
             "invalid_list_item": "Item at index {index} has invalid type, expected {expected_type}",
+            "min_date": "Date must be on or after {min_date}",
+            "max_date": "Date must be on or before {max_date}",
+            "min_datetime": "Datetime must be on or after {min_datetime}",
+            "max_datetime": "Datetime must be on or before {max_datetime}",
+            "file_not_exists": "File {path} does not exist",
+            "not_a_file": "{path} is not a file",
+            "not_a_directory": "{path} is not a directory",
         }
 
         # 合并用户自定义错误消息
@@ -274,3 +334,213 @@ class NumberField(Field):
             
         # 再调用父类验证
         return Field.validate(self, value)
+
+
+class DateField(Field):
+    """日期字段"""
+    DEFAULT_VALIDATION_STRATEGIES = Field.DEFAULT_VALIDATION_STRATEGIES + [
+        DateValidationStrategy()
+    ]
+    
+    def __init__(self, output_format=None, return_timestamp=False, min_date=None, max_date=None, **kwargs):
+        """
+        :param output_format: 日期格式化字符串，如 "%Y-%m-%d"
+        :param return_timestamp: 是否返回时间戳（整数）
+        :param min_date: 最小允许日期
+        :param max_date: 最大允许日期
+        """
+        super(DateField, self).__init__(**kwargs)
+        self.output_format = output_format
+        self.return_timestamp = return_timestamp
+        self.min_date = min_date
+        self.max_date = max_date
+
+    def _parse_isoformat(self, value):
+        """Python 2 版本的 isoformat 解析"""
+        # 简单处理 ISO 格式，如 '2023-07-15'
+        try:
+            return datetime.datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+            
+        # 处理带时间的 ISO 格式，如 '2023-07-15T10:30:00'
+        if 'T' in value:
+            date_str, time_str = value.split('T')
+            try:
+                return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        return None
+
+    def validate(self, value):
+        # 处理整数时间戳
+        if isinstance(value, (int, float)):
+            try:
+                dt = datetime.datetime.fromtimestamp(value)
+                value = dt.date()
+            except (ValueError, TypeError) as e:
+                error_msg = self.get_error_message("invalid_type", expected_type="date")
+                raise ValidationError("{0}: {1}".format(error_msg, str(e)))
+        
+        # 处理字符串输入
+        if isinstance(value, string_types):
+            try:
+                # 尝试解析ISO格式
+                if 'T' in value:
+                    dt = self._parse_isoformat(value)
+                    if dt is None:
+                        # 尝试其他常见格式
+                        for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d-%m-%Y']:
+                            try:
+                                dt = datetime.datetime.strptime(value.split('T')[0], fmt).date()
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            raise ValueError("Invalid date format")
+                    value = dt
+                else:
+                    # 尝试解析常见日期格式
+                    for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d-%m-%Y', '%d/%m/%Y']:
+                        try:
+                            value = datetime.datetime.strptime(value, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        raise ValueError("Invalid date format")
+            except (ValueError, TypeError) as e:
+                error_msg = self.get_error_message("invalid_type", expected_type="date")
+                raise ValidationError("{0}: {1}".format(error_msg, str(e)))
+
+        # 处理datetime对象
+        elif isinstance(value, datetime.datetime):
+            value = value.date()
+
+        # 检查是否为date对象
+        elif not isinstance(value, datetime.date) and value is not None:
+            error_msg = self.get_error_message("invalid_type", expected_type="date")
+            raise ValidationError(error_msg)
+
+        # 根据参数决定返回格式
+        if value is not None and self.return_timestamp:
+            # 转换为时间戳（秒）
+            dt = datetime.datetime.combine(value, datetime.time.min)
+            return int(time.mktime(dt.timetuple()))
+        elif value is not None and self.output_format:
+            # 格式化为字符串
+            return value.strftime(self.output_format)
+        
+        # 再调用父类验证
+        return Field.validate(self, value)
+
+
+class DateTimeField(Field):
+    """日期时间字段"""
+    DEFAULT_VALIDATION_STRATEGIES = Field.DEFAULT_VALIDATION_STRATEGIES + [
+        DateTimeValidationStrategy(),
+        ChoicesValidationStrategy()  # 确保添加Choices验证策略
+    ]
+    
+    def __init__(self, output_format=None, return_timestamp=False, min_datetime=None, max_datetime=None, **kwargs):
+        """
+        :param output_format: 日期时间格式化字符串，如 "%Y-%m-%d %H:%M:%S"
+        :param return_timestamp: 是否返回时间戳（整数）
+        :param min_datetime: 最小允许日期时间
+        :param max_datetime: 最大允许日期时间
+        """
+        super(DateTimeField, self).__init__(**kwargs)
+        self.output_format = output_format
+        self.return_timestamp = return_timestamp
+        self.min_datetime = min_datetime
+        self.max_datetime = max_datetime
+
+    def _parse_isoformat(self, value):
+        """Python 2 版本的 isoformat 解析"""
+        try:
+            # 处理标准 ISO 格式
+            if 'T' in value:
+                date_str, time_str = value.split('T')
+                if '.' in time_str:
+                    # 处理带毫秒的格式
+                    return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
+                else:
+                    return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
+            else:
+                # 尝试其他常见格式
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M:%S', '%d/%m/%Y %H:%M:%S']:
+                    try:
+                        return datetime.datetime.strptime(value, fmt)
+                    except ValueError:
+                        continue
+        except ValueError:
+            pass
+        return None
+
+    def validate(self, value):
+        # 处理整数或浮点数时间戳
+        if isinstance(value, (int, float)):
+            try:
+                return datetime.datetime.fromtimestamp(value)
+            except (ValueError, TypeError) as e:
+                error_msg = self.get_error_message("invalid_type", expected_type="datetime")
+                raise ValidationError("{0}: {1}".format(error_msg, str(e)))
+        
+        # 处理字符串输入
+        if isinstance(value, string_types):
+            try:
+                # 尝试解析ISO格式
+                if 'T' in value:
+                    dt = self._parse_isoformat(value)
+                    if dt is not None:
+                        value = dt
+                    else:
+                        raise ValueError("Invalid datetime format")
+                else:
+                    # 尝试解析常见日期时间格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M:%S', '%d/%m/%Y %H:%M:%S']:
+                        try:
+                            value = datetime.datetime.strptime(value, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        raise ValueError("Invalid datetime format")
+            except (ValueError, TypeError) as e:
+                error_msg = self.get_error_message("invalid_type", expected_type="datetime")
+                raise ValidationError("{0}: {1}".format(error_msg, str(e)))
+
+        # 检查是否为datetime对象
+        elif not isinstance(value, datetime.datetime) and value is not None:
+            error_msg = self.get_error_message("invalid_type", expected_type="datetime")
+            raise ValidationError(error_msg)
+
+        # 再调用父类验证
+        result = Field.validate(self, value)
+        
+        # 根据参数决定返回格式
+        if result is not None and self.return_timestamp:
+            # 转换为时间戳（秒）
+            return int(time.mktime(result.timetuple()))
+        elif result is not None and self.output_format:
+            # 格式化为字符串
+            return result.strftime(self.output_format)
+        
+        return result
+
+
+class EmailField(StringField):
+    """电子邮件字段"""
+    EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    
+    def __init__(self, **kwargs):
+        # 确保使用电子邮件正则表达式
+        kwargs.setdefault('regex', self.EMAIL_REGEX)
+        super(EmailField, self).__init__(**kwargs)
+        
+        # 更新错误消息
+        self.error_messages["regex"] = "Invalid email format"
+        self.error_messages["invalid_type"] = "Value must be a valid email address"
+
+        

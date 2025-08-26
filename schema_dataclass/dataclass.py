@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import abc
-from .fields import Field, ValidationError
+from schema_dataclass.fields import Field, ValidationError
 
 
 class DataClassWrap(object):
