@@ -248,8 +248,8 @@ class TestCustomGetters:
             @getter("title")
             def get_title(self):
                 """自定义获取标题的方法"""
-                title = self.__dict__.get("title", "")
-                status = self.__dict__.get("status", "draft")
+                title = self.title
+                status = self.status
                 return "[{0}] {1}".format(status.upper(), title)
 
         post = BlogPost(title="Hello World")
@@ -279,10 +279,6 @@ class TestCustomGetters:
         # get_value 方法应该优先于默认值
         assert obj.value == "custom_getter_value"
 
-        # 但直接访问 __dict__ 应该显示实际存储的值
-        assert obj.__dict__.get("value") is "default"
-        assert obj.__dict__.get("description") is None  # 没有设置实际值
-
     @pytest.mark.dataclass
     def test_getter_self_reference(self):
         """测试 getter 方法优先级"""
@@ -310,10 +306,6 @@ class TestCustomGetters:
         assert (
             obj.description == "No description"
         )  # get_description 返回 No description
-
-        # 但直接访问 __dict__ 应该显示实际存储的值
-        assert obj.__dict__.get("value") is "default"
-        assert obj.__dict__.get("description") is None  # 没有设置实际值
 
         @dataclass
         class Test2Class(object):
@@ -547,4 +539,17 @@ class TestCustomGetters:
 
         demo1 = Demo(name="world")
         assert demo1 ==  demo
+
+    @pytest.mark.dataclass
+    def test_dataclass_getter_1(self):
+        @dataclass
+        class Demo(object):
+            name = StringField(min_length=2, max_length=10)
+
+            @getter("name")
+            def hello_name(self):
+                return "hello, {0}".format(self.name)
+            
+        demo = Demo(name="world")
+        assert demo.name == "hello, world"
         

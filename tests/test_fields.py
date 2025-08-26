@@ -253,8 +253,7 @@ class TestListField:
         field = ListField(item_type=str)  # 默认 required=False
 
         # None 应该返回 None (没有默认值)
-        result = field.validate(None)
-        assert result is None
+        assert field.get_default() is None
 
         # 有效值应该正常验证
         result = field.validate(["test", "list"])

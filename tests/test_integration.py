@@ -231,7 +231,7 @@ class TestComplexValidationScenarios:
             @validate("price")
             def validate_category_price_rules(self, price):
                 """不同类别的价格规则"""
-                category = self.__dict__.get("category")
+                category = self.category
                 if category == "electronics" and price < 10:
                     raise ValidationError("Electronics must cost at least $10")
                 elif category == "books" and price > 100:
@@ -267,7 +267,7 @@ class TestComplexValidationScenarios:
             @validate("end_date")
             def validate_date_order(self, end_date):
                 """结束日期必须晚于开始日期"""
-                start_date = self.__dict__.get("start_date")
+                start_date = self.start_date
                 if start_date and end_date <= start_date:
                     raise ValidationError("End date must be after start date")
 

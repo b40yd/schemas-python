@@ -11,9 +11,125 @@ if sys.version_info[0] >= 3:
 else:
     string_types = (str, unicode)
 
+class ValidationStrategy(object):
+    __metaclass__ = abc.ABCMeta
+    """验证策略基类"""
+    
+    @abc.abstractmethod
+    def validate(self, value, field):
+        pass
+
+
+class RequiredValidationStrategy(ValidationStrategy):
+    """必填字段验证策略"""
+    def validate(self, value, field):
+        if value is None or (field.required and isinstance(value, string_types) and value == ""):
+            if field.required:
+                error_msg = field.get_error_message("required")
+                raise ValidationError(error_msg)
+            return field.get_default()
+        return value
+
+
+class LengthValidationStrategy(ValidationStrategy):
+    """长度验证策略"""
+    def validate(self, value, field):
+        if isinstance(value, string_types + (list, tuple, set)):
+            length = len(value)
+            if field.min_length is not None and length < field.min_length:
+                error_msg = field.get_error_message("min_length", min_length=field.min_length)
+                raise ValidationError(error_msg)
+            if field.max_length is not None and length > field.max_length:
+                error_msg = field.get_error_message("max_length", max_length=field.max_length)
+                raise ValidationError(error_msg)
+        return value
+
+
+class RangeValidationStrategy(ValidationStrategy):
+    """范围验证策略"""
+    def validate(self, value, field):
+        if isinstance(value, (int, float)):
+            if field.minvalue is not None and value < field.minvalue:
+                error_msg = field.get_error_message("minvalue", minvalue=field.minvalue)
+                raise ValidationError(error_msg)
+            if field.maxvalue is not None and value > field.maxvalue:
+                error_msg = field.get_error_message("maxvalue", maxvalue=field.maxvalue)
+                raise ValidationError(error_msg)
+        return value
+
+
+class ChoicesValidationStrategy(ValidationStrategy):
+    """选项验证策略"""
+    def validate(self, value, field):
+        if field.choices is not None and value not in field.choices:
+            error_msg = field.get_error_message("choices", choices=field.choices)
+            raise ValidationError(error_msg)
+        return value
+
+
+class RegexValidationStrategy(ValidationStrategy):
+    """正则表达式验证策略"""
+    def validate(self, value, field):
+        if field.regex is not None and isinstance(value, string_types):
+            if not re.match(field.regex, value):
+                error_msg = field.get_error_message("regex", regex=field.regex)
+                raise ValidationError(error_msg)
+        return value
+
+
+class ListItemsValidationStrategy(ValidationStrategy):
+    """列表项验证策略"""
+    def validate(self, value, field):
+        if not isinstance(value, list) or not field.item_type:
+            error_msg = field.get_error_message("invalid_type", expected_type="list")
+            raise ValidationError(error_msg)
+
+        results = []
+        for i, item in enumerate(value):
+            try:
+                # 情况1: item_type 是 dataclass 类型
+                if (
+                    isinstance(field.item_type, type) and 
+                    hasattr(field.item_type, '__dataclass_fields__') and
+                    isinstance(item, dict)
+                ):
+                    results.append(field.item_type(**item))
+                    continue
+
+                # 情况2: item_type 是 Field 实例
+                if isinstance(field.item_type, Field):
+                    validated_item = field.item_type.validate(item)
+                    results.append(validated_item)
+                    continue
+
+                # 情况3: item_type 是普通类型（如 int, str）
+                if not isinstance(item, field.item_type):
+                    expected = getattr(field.item_type, "__name__", str(field.item_type))
+                    error_msg = field.get_error_message(
+                        "invalid_list_item", index=i, expected_type=expected
+                    )
+                    raise ValidationError(error_msg, field_name=field.name)
+                results.append(item)
+
+            except ValidationError:
+                raise
+            except Exception:
+                expected = getattr(field.item_type, "__name__", str(field.item_type))
+                error_msg = field.get_error_message(
+                    "invalid_list_item", index=i, expected_type=expected
+                )
+                raise ValidationError(error_msg, field_name=field.name)
+        return results
+
 
 class Field(object):
+    """字段基类，使用策略模式实现验证逻辑"""
     __metaclass__ = abc.ABCMeta
+    
+    # 默认验证策略
+    DEFAULT_VALIDATION_STRATEGIES = [
+        RequiredValidationStrategy(),
+    ]
 
     def __init__(
         self,
@@ -28,10 +144,11 @@ class Field(object):
         item_type=None,
         regex=None,
         error_messages=None,
+        validation_strategies=None,
         **kwargs
     ):
         """
-        增强型字段验证基类
+        字段初始化
 
         :param default: 默认值（可为可调用对象）
         :param alias: 字段别名（用于序列化/反序列化）
@@ -44,6 +161,7 @@ class Field(object):
         :param item_type: 列表项类型（ListField专用）
         :param regex: 正则表达式模式（字符串字段专用）
         :param error_messages: 自定义错误消息字典
+        :param validation_strategies: 自定义验证策略
         """
         self.default = default
         self.alias = alias
@@ -75,6 +193,9 @@ class Field(object):
         self.error_messages = self.default_error_messages.copy()
         if error_messages:
             self.error_messages.update(error_messages)
+            
+        # 验证策略
+        self.validation_strategies = validation_strategies or list(self.DEFAULT_VALIDATION_STRATEGIES)
 
     def get_error_message(self, error_key, **format_kwargs):
         """
@@ -97,198 +218,59 @@ class Field(object):
             return self.default()
         return self.default
 
-    def get_value(self, instance, name):
-        """
-        获取字段值的统一接口
-        优先级：get_xxx() 方法 > 实例属性 > 默认值
-
-        :param instance: 数据类实例
-        :param name: 字段名称
-        :return: 字段值
-        """
-        # 1. 优先：是否存在 get_xxx() 方法
-        getter_name = "get_{0}".format(name)
-        if hasattr(instance.__class__, getter_name):
-            getter = getattr(instance.__class__, getter_name)
-            if callable(getter):
-                return getter(instance)
-
-        # 2. 实例属性是否存在
-        if hasattr(instance, "__dict__") and name in instance.__dict__:
-            return instance.__dict__[name]
-
-        # 3. 返回默认值
-        return self.get_default()
-
-    def validate_required(self, value):
-        """Check required and return default if not required"""
-        # 对于必填字段，None 和空字符串都是无效的
-        if value is None or (
-            self.required and isinstance(value, string_types) and value == ""
-        ):
-            if self.required:
-                error_msg = self.get_error_message("required")
-                raise ValidationError(error_msg)
-            return self.get_default()
-        return value
-
-    def validate_length(self, value):
-        """Validate length for strings and lists"""
-        if isinstance(value, string_types + (list, tuple, set)):
-            length = len(value)
-            if self.min_length is not None and length < self.min_length:
-                error_msg = self.get_error_message(
-                    "min_length", min_length=self.min_length
-                )
-                raise ValidationError(error_msg)
-            if self.max_length is not None and length > self.max_length:
-                error_msg = self.get_error_message(
-                    "max_length", max_length=self.max_length
-                )
-                raise ValidationError(error_msg)
-        return value
-
-    def validatevalue_range(self, value):
-        """Validate value range for numbers"""
-        if isinstance(value, (int, float)):
-            if self.minvalue is not None and value < self.minvalue:
-                error_msg = self.get_error_message("minvalue", minvalue=self.minvalue)
-                raise ValidationError(error_msg)
-            if self.maxvalue is not None and value > self.maxvalue:
-                error_msg = self.get_error_message("maxvalue", maxvalue=self.maxvalue)
-                raise ValidationError(error_msg)
-
-        return value
-
-    def validate_choices(self, value):
-        """Validate value is in allowed choices"""
-        if self.choices is not None:
-            if value not in self.choices:
-                error_msg = self.get_error_message("choices", choices=self.choices)
-                raise ValidationError(error_msg)
-
-        return value
-
-    def validate_regex(self, value):
-        """Validate value matches regex pattern"""
-        if self.regex is not None and isinstance(value, string_types):
-            if not re.match(self.regex, value):
-                error_msg = self.get_error_message("regex", regex=self.regex)
-                raise ValidationError(error_msg)
-
-        return value
-
-    def validate_nested_model(self, value):
-        """
-        如果 item_type 是 DataClass 子类，且 value 是 dict，则实例化并校验
-        """
-        if (
-            isinstance(self.item_type, type)
-            and hasattr(self.item_type, "_dataclass_fields")
-            and isinstance(value, dict)
-        ):
-            # 实例化嵌套模型并校验
-            return self.item_type(**value)
-
-        return value
-
-    def validate_list_items(self, value):
-        if not isinstance(value, list) or not self.item_type:
-            error_msg = self.get_error_message("invalid_type", expected_type="list")
-            raise ValidationError(error_msg)
-
-        results = []
-        for i, item in enumerate(value):
+    def validate(self, value):
+        """执行所有验证策略"""
+        for strategy in self.validation_strategies:
             try:
-                # 情况1: item_type 是 Model 子类，item 是 dict
-                data = self.validate_nested_model(item)
-                if data != item:  # 如果返回了不同的对象，说明是嵌套模型
-                    results.append(data)
-                    continue
-
-                # 情况2: item_type 是 Field 实例
-                if hasattr(self.item_type, "validate"):
-                    validated_item = self.item_type.validate(item)
-                    results.append(validated_item)
-                    continue
-
-                # 情况3: item_type 是普通类型（如 int, str）
-                if not isinstance(item, self.item_type):
-                    expected = getattr(self.item_type, "__name__", str(self.item_type))
-                    error_msg = self.get_error_message(
-                        "invalid_list_item", index=i, expected_type=expected
-                    )
-                    raise ValidationError(error_msg, field_name=self.name)
-                results.append(item)
-
+                value = strategy.validate(value, self)
             except ValidationError:
                 raise
-            except Exception:
-                expected = getattr(self.item_type, "__name__", str(self.item_type))
-                error_msg = self.get_error_message(
-                    "invalid_list_item", index=i, expected_type=expected
-                )
-                raise ValidationError(error_msg, field_name=self.name)
-        return results
-
-    @abc.abstractmethod
-    def validate(self, value):
-        pass
+            except Exception as e:
+                error_msg = self.get_error_message("invalid_type", expected_type=self.__class__.__name__)
+                raise ValidationError("{0}: {1}".format(error_msg, str(e)))
+        return value
 
 
 class StringField(Field):
-    def validate(self, value):
-        """验证字段值，无效时抛出ValueError"""
-        value = self.validate_required(value)
-        if value is None:  # 已返回默认值且非必填
-            return value
+    """字符串字段"""
+    DEFAULT_VALIDATION_STRATEGIES = Field.DEFAULT_VALIDATION_STRATEGIES + [
+        LengthValidationStrategy(),
+        RegexValidationStrategy(),
+        ChoicesValidationStrategy()
+    ]
 
-        # 确保是字符串类型
-        if not isinstance(value, string_types):
+    def validate(self, value):
+        # 先执行自己的类型检查
+        if value is not None and not isinstance(value, string_types):
             error_msg = self.get_error_message("invalid_type", expected_type="string")
             raise ValidationError(error_msg)
-
-        # 长度校验
-        value = self.validate_length(value)
-
-        # 正则表达式校验
-        value = self.validate_regex(value)
-
-        # 枚举选项校验
-        value = self.validate_choices(value)
-
-        return value
+            
+        # 再调用父类验证
+        return Field.validate(self, value)
 
 
 class ListField(Field):
-    def validate(self, value):
-        value = self.validate_required(value)
-        if value is None:  # 已返回默认值且非必填
-            return value
-
-        # 长度校验（字符串、列表）
-        value = self.validate_length(value)
-        # 列表项类型校验
-        value = self.validate_list_items(value)
-        return value
+    """列表字段"""
+    DEFAULT_VALIDATION_STRATEGIES = Field.DEFAULT_VALIDATION_STRATEGIES + [
+        LengthValidationStrategy(),
+        ListItemsValidationStrategy()
+    ]
 
 
 class NumberField(Field):
-    def validate(self, value):
-        value = self.validate_required(value)
-        if value is None:  # 已返回默认值且非必填
-            return value
+    """数字字段"""
+    DEFAULT_VALIDATION_STRATEGIES = Field.DEFAULT_VALIDATION_STRATEGIES + [
+        RangeValidationStrategy(),
+        ChoicesValidationStrategy()
+    ]
 
-        # 确保是数字类型
-        if not isinstance(
+    def validate(self, value):
+        # 先执行自己的类型检查
+        if value is not None and not isinstance(
             value, (int, float, long if sys.version_info[0] < 3 else int)
         ):
             error_msg = self.get_error_message("invalid_type", expected_type="number")
             raise ValidationError(error_msg)
-
-        # 数值范围校验
-        value = self.validatevalue_range(value)
-
-        # 枚举选项校验
-        value = self.validate_choices(value)
-        return value
+            
+        # 再调用父类验证
+        return Field.validate(self, value)
